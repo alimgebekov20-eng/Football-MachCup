@@ -13,7 +13,8 @@ class FootballGame {
         this.ball = {};
         this.score = { team1: 0, team2: 0 };
         this.isFullscreen = false;
-        this._hasReceivedState = false; // Флаг, что данные пришли
+        this._hasReceivedState = false;
+        this._canMove = false; // 👈 НОВАЯ ПЕРЕМЕННАЯ
         
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
@@ -314,6 +315,7 @@ class FootballGame {
             case 'game_state':
                 console.log('📊 СОСТОЯНИЕ ИГРЫ:', data.state);
                 this._hasReceivedState = true;
+                this._canMove = true; // 👈 РАЗРЕШАЕМ ДВИЖЕНИЕ
                 this.updateGameState(data.state);
                 break;
                 
@@ -480,6 +482,7 @@ class FootballGame {
         this.timer = data.duration || 120;
         this.team = data.team;
         this._hasReceivedState = false;
+        this._canMove = false; // 👈 ЗАПРЕЩАЕМ ДВИЖЕНИЕ ДО ПОЛУЧЕНИЯ ДАННЫХ
         
         this.team1Name.textContent = this.team === 'team1' ? '👤 Вы' : '👤 Соперник';
         this.team2Name.textContent = this.team === 'team2' ? '👤 Вы' : '👤 Соперник';
@@ -488,12 +491,10 @@ class FootballGame {
         this.resizeCanvas();
         this.gameOverModal.classList.remove('active');
         
-        // ✅ НЕ ОТПРАВЛЯЕМ ДВИЖЕНИЕ ПРИ СТАРТЕ — ЖДЁМ ПОЗИЦИИ ОТ СЕРВЕРА
-        // this.moveState = {
-        //     x: this.canvas.width / 2,
-        //     y: this.canvas.height / 2
-        // };
-        this.moveState = { x: null, y: null };
+        this.moveState = {
+            x: this.canvas.width / 2,
+            y: this.canvas.height / 2
+        };
         
         this.startMovementLoop();
         
@@ -526,6 +527,7 @@ class FootballGame {
                     radius: 10
                 };
                 this.score = { team1: 0, team2: 0 };
+                this._canMove = true;
             }
         }, 2000);
     }
@@ -536,7 +538,8 @@ class FootballGame {
         }
         
         this.moveInterval = setInterval(() => {
-            if (this.isRunning && this.ws && this.ws.readyState === WebSocket.OPEN) {
+            // 👇 ОТПРАВЛЯЕМ ТОЛЬКО ЕСЛИ РАЗРЕШЕНО
+            if (this.isRunning && this.ws && this.ws.readyState === WebSocket.OPEN && this._canMove) {
                 this.ws.send(JSON.stringify({
                     type: 'player_movement',
                     x: this.moveState.x,
@@ -550,8 +553,8 @@ class FootballGame {
         if (!state) return;
         
         this._hasReceivedState = true;
+        this._canMove = true; // 👈 РАЗРЕШАЕМ ДВИЖЕНИЕ
         
-        // Проверяем, что данные есть
         if (state.players && state.players.length > 0) {
             this.players = {};
             state.players.forEach(player => {
@@ -595,6 +598,7 @@ class FootballGame {
     handleBackToMenu() {
         this.isRunning = false;
         this._hasReceivedState = false;
+        this._canMove = false;
         if (this.moveInterval) {
             clearInterval(this.moveInterval);
             this.moveInterval = null;
@@ -607,10 +611,29 @@ class FootballGame {
         const isMoving = Math.abs(direction.x) > 0.05 || Math.abs(direction.y) > 0.05;
         
         if (!isMoving) {
-            this.moveState = {
-                x: this.canvas.width / 2,
-                y: this.canvas.height / 2
-            };
+            // Находим своего игрока
+            let myPlayer = null;
+            for (const id in this.players) {
+                if (this.players[id].id === this.playerId) {
+                    myPlayer = this.players[id];
+                    break;
+                }
+            }
+            
+            if (myPlayer && myPlayer.x !== undefined && myPlayer.y !== undefined) {
+                // Отправляем текущую позицию игрока (стоять на месте)
+                const px = (myPlayer.x / 800) * this.canvas.width;
+                const py = (myPlayer.y / 600) * this.canvas.height;
+                this.moveState = {
+                    x: px,
+                    y: py
+                };
+            } else {
+                this.moveState = {
+                    x: this.canvas.width / 2,
+                    y: this.canvas.height / 2
+                };
+            }
             return;
         }
         
@@ -689,228 +712,221 @@ class FootballGame {
     }
     
     render() {
-    const ctx = this.ctx;
-    const w = this.canvas.width;
-    const h = this.canvas.height;
-    
-    if (!w || !h) return;
-    
-    ctx.clearRect(0, 0, w, h);
-    
-    // --- ПОЛЕ ---
-    const gradient = ctx.createLinearGradient(0, 0, 0, h);
-    gradient.addColorStop(0, '#2d8a4e');
-    gradient.addColorStop(0.5, '#3ca55c');
-    gradient.addColorStop(1, '#1a6a3a');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, w, h);
-    
-    // Полосы
-    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-    ctx.lineWidth = 1;
-    for (let i = 0; i < h; i += 40) {
-        ctx.beginPath();
-        ctx.moveTo(0, i);
-        ctx.lineTo(w, i);
-        ctx.stroke();
-    }
-    
-    // --- РАЗМЕТКА ---
-    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
-    ctx.lineWidth = 2;
-    
-    ctx.beginPath();
-    ctx.moveTo(w/2, 20);
-    ctx.lineTo(w/2, h-20);
-    ctx.stroke();
-    
-    ctx.beginPath();
-    ctx.arc(w/2, h/2, Math.min(w, h) * 0.08, 0, Math.PI * 2);
-    ctx.stroke();
-    
-    ctx.beginPath();
-    ctx.arc(w/2, h/2, 4, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-    ctx.fill();
-    
-    // --- ВОРОТА ---
-    const goalWidth = 50;
-    const goalHeight = h * 0.2;
-    const goalY = h/2 - goalHeight/2;
-    const goalDepth = 15;
-    
-    // Левые ворота
-    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(0, goalY);
-    ctx.lineTo(goalDepth, goalY);
-    ctx.lineTo(goalDepth, goalY + goalHeight);
-    ctx.lineTo(0, goalY + goalHeight);
-    ctx.stroke();
-    
-    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-    ctx.lineWidth = 1;
-    const gridSize = 8;
-    for (let y = goalY + 5; y < goalY + goalHeight - 5; y += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(1, y);
-        ctx.lineTo(goalDepth - 1, y);
-        ctx.stroke();
-    }
-    for (let x = 2; x < goalDepth - 2; x += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(x, goalY + 5);
-        ctx.lineTo(x, goalY + goalHeight - 5);
-        ctx.stroke();
-    }
-    
-    // Правые ворота
-    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(w, goalY);
-    ctx.lineTo(w - goalDepth, goalY);
-    ctx.lineTo(w - goalDepth, goalY + goalHeight);
-    ctx.lineTo(w, goalY + goalHeight);
-    ctx.stroke();
-    
-    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-    ctx.lineWidth = 1;
-    for (let y = goalY + 5; y < goalY + goalHeight - 5; y += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(w - 1, y);
-        ctx.lineTo(w - goalDepth + 1, y);
-        ctx.stroke();
-    }
-    for (let x = w - 2; x > w - goalDepth + 2; x -= gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(x, goalY + 5);
-        ctx.lineTo(x, goalY + goalHeight - 5);
-        ctx.stroke();
-    }
-    
-    // --- ШТРАФНЫЕ ---
-    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-    ctx.lineWidth = 2;
-    const penaltyWidth = 80;
-    const penaltyHeight = goalHeight + 40;
-    const penaltyY = h/2 - penaltyHeight/2;
-    ctx.strokeRect(0, penaltyY, penaltyWidth, penaltyHeight);
-    ctx.strokeRect(w - penaltyWidth, penaltyY, penaltyWidth, penaltyHeight);
-    
-    // ============================================================
-    // ===== МЯЧ (МАСШТАБИРУЕМ ОТ 0-800 К РАЗМЕРУ CANVAS) =====
-    // ============================================================
-    if (this.ball && this.ball.x !== undefined) {
-        // ✅ МАСШТАБИРУЕМ: от 0-800 к 0-w / 0-600 к 0-h
-        const bx = (this.ball.x / 800) * w;
-        const by = (this.ball.y / 600) * h;
-        const br = Math.max(6, (this.ball.radius || 10) / 800 * w * 1.2);
+        const ctx = this.ctx;
+        const w = this.canvas.width;
+        const h = this.canvas.height;
         
-        ctx.shadowColor = 'rgba(255,255,255,0.3)';
-        ctx.shadowBlur = 10;
+        if (!w || !h) return;
+        
+        ctx.clearRect(0, 0, w, h);
+        
+        // --- ПОЛЕ ---
+        const gradient = ctx.createLinearGradient(0, 0, 0, h);
+        gradient.addColorStop(0, '#2d8a4e');
+        gradient.addColorStop(0.5, '#3ca55c');
+        gradient.addColorStop(1, '#1a6a3a');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, w, h);
+        
+        // Полосы
+        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < h; i += 40) {
+            ctx.beginPath();
+            ctx.moveTo(0, i);
+            ctx.lineTo(w, i);
+            ctx.stroke();
+        }
+        
+        // --- РАЗМЕТКА ---
+        ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+        ctx.lineWidth = 2;
+        
         ctx.beginPath();
-        ctx.arc(bx + 2, by + 2, br, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.moveTo(w/2, 20);
+        ctx.lineTo(w/2, h-20);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.arc(w/2, h/2, Math.min(w, h) * 0.08, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.arc(w/2, h/2, 4, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
         ctx.fill();
         
-        ctx.shadowColor = 'rgba(255,255,255,0.2)';
-        ctx.shadowBlur = 8;
-        ctx.beginPath();
-        ctx.arc(bx, by, br, 0, Math.PI * 2);
-        const ballGrad = ctx.createRadialGradient(bx - br*0.3, by - br*0.3, 0, bx, by, br);
-        ballGrad.addColorStop(0, '#ffffff');
-        ballGrad.addColorStop(0.7, '#f0f0f0');
-        ballGrad.addColorStop(1, '#cccccc');
-        ctx.fillStyle = ballGrad;
-        ctx.fill();
-        ctx.shadowBlur = 0;
+        // --- ВОРОТА ---
+        const goalWidth = 50;
+        const goalHeight = h * 0.2;
+        const goalY = h/2 - goalHeight/2;
+        const goalDepth = 15;
         
-        ctx.strokeStyle = 'rgba(100,100,100,0.3)';
-        ctx.lineWidth = 0.5;
+        // Левые ворота
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+        ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.moveTo(bx - br, by);
-        ctx.lineTo(bx + br, by);
+        ctx.moveTo(0, goalY);
+        ctx.lineTo(goalDepth, goalY);
+        ctx.lineTo(goalDepth, goalY + goalHeight);
+        ctx.lineTo(0, goalY + goalHeight);
         ctx.stroke();
+        
+        ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+        ctx.lineWidth = 1;
+        const gridSize = 8;
+        for (let y = goalY + 5; y < goalY + goalHeight - 5; y += gridSize) {
+            ctx.beginPath();
+            ctx.moveTo(1, y);
+            ctx.lineTo(goalDepth - 1, y);
+            ctx.stroke();
+        }
+        for (let x = 2; x < goalDepth - 2; x += gridSize) {
+            ctx.beginPath();
+            ctx.moveTo(x, goalY + 5);
+            ctx.lineTo(x, goalY + goalHeight - 5);
+            ctx.stroke();
+        }
+        
+        // Правые ворота
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+        ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.moveTo(bx, by - br);
-        ctx.lineTo(bx, by + br);
+        ctx.moveTo(w, goalY);
+        ctx.lineTo(w - goalDepth, goalY);
+        ctx.lineTo(w - goalDepth, goalY + goalHeight);
+        ctx.lineTo(w, goalY + goalHeight);
         ctx.stroke();
-        ctx.beginPath();
-        ctx.arc(bx, by, br * 0.5, 0, Math.PI * 2);
-        ctx.stroke();
-    }
-    
-    // ============================================================
-    // ===== ИГРОКИ (МАСШТАБИРУЕМ ОТ 0-800 К РАЗМЕРУ CANVAS) =====
-    // ============================================================
-    const playersList = Object.values(this.players);
-    if (playersList.length > 0) {
-        playersList.forEach(player => {
-            if (player.x === undefined || player.y === undefined) return;
+        
+        ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+        ctx.lineWidth = 1;
+        for (let y = goalY + 5; y < goalY + goalHeight - 5; y += gridSize) {
+            ctx.beginPath();
+            ctx.moveTo(w - 1, y);
+            ctx.lineTo(w - goalDepth + 1, y);
+            ctx.stroke();
+        }
+        for (let x = w - 2; x > w - goalDepth + 2; x -= gridSize) {
+            ctx.beginPath();
+            ctx.moveTo(x, goalY + 5);
+            ctx.lineTo(x, goalY + goalHeight - 5);
+            ctx.stroke();
+        }
+        
+        // --- ШТРАФНЫЕ ---
+        ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+        ctx.lineWidth = 2;
+        const penaltyWidth = 80;
+        const penaltyHeight = goalHeight + 40;
+        const penaltyY = h/2 - penaltyHeight/2;
+        ctx.strokeRect(0, penaltyY, penaltyWidth, penaltyHeight);
+        ctx.strokeRect(w - penaltyWidth, penaltyY, penaltyWidth, penaltyHeight);
+        
+        // --- МЯЧ ---
+        if (this.ball && this.ball.x !== undefined) {
+            const bx = (this.ball.x / 800) * w;
+            const by = (this.ball.y / 600) * h;
+            const br = Math.max(6, (this.ball.radius || 10) / 800 * w * 1.2);
             
-            // ✅ МАСШТАБИРУЕМ: от 0-800 к 0-w / 0-600 к 0-h
-            const px = (player.x / 800) * w;
-            const py = (player.y / 600) * h;
-            const pr = Math.max(12, (player.radius || 14) / 800 * w * 0.9);
+            ctx.shadowColor = 'rgba(255,255,255,0.3)';
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.arc(bx + 2, by + 2, br, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.fill();
             
-            ctx.shadowColor = 'rgba(0,0,0,0.2)';
+            ctx.shadowColor = 'rgba(255,255,255,0.2)';
             ctx.shadowBlur = 8;
             ctx.beginPath();
-            ctx.arc(px + 2, py + 3, pr, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(0,0,0,0.15)';
+            ctx.arc(bx, by, br, 0, Math.PI * 2);
+            const ballGrad = ctx.createRadialGradient(bx - br*0.3, by - br*0.3, 0, bx, by, br);
+            ballGrad.addColorStop(0, '#ffffff');
+            ballGrad.addColorStop(0.7, '#f0f0f0');
+            ballGrad.addColorStop(1, '#cccccc');
+            ctx.fillStyle = ballGrad;
             ctx.fill();
-            
-            ctx.shadowColor = 'rgba(0,0,0,0.2)';
-            ctx.shadowBlur = 6;
-            const color = player.team === 'team1' ? '#4facfe' : '#f5576c';
-            const grad = ctx.createRadialGradient(px - pr*0.3, py - pr*0.3, 0, px, py, pr);
-            grad.addColorStop(0, color);
-            grad.addColorStop(0.6, color);
-            grad.addColorStop(1, player.team === 'team1' ? '#2d7dd2' : '#c0392b');
-            ctx.beginPath();
-            ctx.arc(px, py, pr, 0, Math.PI * 2);
-            ctx.fillStyle = grad;
-            ctx.fill();
-            
             ctx.shadowBlur = 0;
-            ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-            ctx.lineWidth = 1.5;
+            
+            ctx.strokeStyle = 'rgba(100,100,100,0.3)';
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.moveTo(bx - br, by);
+            ctx.lineTo(bx + br, by);
             ctx.stroke();
-            
-            ctx.fillStyle = 'rgba(255,255,255,0.8)';
-            ctx.font = `${Math.max(9, pr * 0.6)}px Arial`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'bottom';
-            const nameDisplay = (player.name || 'Игрок').length > 8 ? (player.name || 'Игрок').slice(0, 7) + '…' : (player.name || 'Игрок');
-            ctx.fillText(nameDisplay, px, py - pr - 3);
-            
-            ctx.fillStyle = 'rgba(255,255,255,0.9)';
-            ctx.font = `${Math.max(10, pr * 0.6)}px Arial`;
-            ctx.textBaseline = 'middle';
-            ctx.fillText('7', px, py + 1);
-            
-            if (player.hasBall) {
-                ctx.shadowColor = 'rgba(255,215,0,0.4)';
-                ctx.shadowBlur = 15;
-                ctx.strokeStyle = 'rgba(255,215,0,0.6)';
-                ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(bx, by - br);
+            ctx.lineTo(bx, by + br);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(bx, by, br * 0.5, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        
+        // --- ИГРОКИ ---
+        const playersList = Object.values(this.players);
+        if (playersList.length > 0) {
+            playersList.forEach(player => {
+                if (player.x === undefined || player.y === undefined) return;
+                
+                const px = (player.x / 800) * w;
+                const py = (player.y / 600) * h;
+                const pr = Math.max(12, (player.radius || 14) / 800 * w * 0.9);
+                
+                ctx.shadowColor = 'rgba(0,0,0,0.2)';
+                ctx.shadowBlur = 8;
                 ctx.beginPath();
-                ctx.arc(px, py, pr + 3, 0, Math.PI * 2);
-                ctx.stroke();
+                ctx.arc(px + 2, py + 3, pr, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(0,0,0,0.15)';
+                ctx.fill();
+                
+                ctx.shadowColor = 'rgba(0,0,0,0.2)';
+                ctx.shadowBlur = 6;
+                const color = player.team === 'team1' ? '#4facfe' : '#f5576c';
+                const grad = ctx.createRadialGradient(px - pr*0.3, py - pr*0.3, 0, px, py, pr);
+                grad.addColorStop(0, color);
+                grad.addColorStop(0.6, color);
+                grad.addColorStop(1, player.team === 'team1' ? '#2d7dd2' : '#c0392b');
+                ctx.beginPath();
+                ctx.arc(px, py, pr, 0, Math.PI * 2);
+                ctx.fillStyle = grad;
+                ctx.fill();
+                
                 ctx.shadowBlur = 0;
-            }
-        });
-    } else {
-        // Если игроков нет — рисуем сообщение
-        ctx.fillStyle = 'rgba(255,255,255,0.3)';
-        ctx.font = '20px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('⏳ Ожидание игроков...', w/2, h/2);
+                ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+                
+                ctx.fillStyle = 'rgba(255,255,255,0.8)';
+                ctx.font = `${Math.max(9, pr * 0.6)}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                const nameDisplay = (player.name || 'Игрок').length > 8 ? (player.name || 'Игрок').slice(0, 7) + '…' : (player.name || 'Игрок');
+                ctx.fillText(nameDisplay, px, py - pr - 3);
+                
+                ctx.fillStyle = 'rgba(255,255,255,0.9)';
+                ctx.font = `${Math.max(10, pr * 0.6)}px Arial`;
+                ctx.textBaseline = 'middle';
+                ctx.fillText('7', px, py + 1);
+                
+                if (player.hasBall) {
+                    ctx.shadowColor = 'rgba(255,215,0,0.4)';
+                    ctx.shadowBlur = 15;
+                    ctx.strokeStyle = 'rgba(255,215,0,0.6)';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(px, py, pr + 3, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.shadowBlur = 0;
+                }
+            });
+        } else {
+            ctx.fillStyle = 'rgba(255,255,255,0.3)';
+            ctx.font = '20px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('⏳ Ожидание игроков...', w/2, h/2);
+        }
     }
-}
 }
 
 document.addEventListener('DOMContentLoaded', () => {
