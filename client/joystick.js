@@ -4,29 +4,43 @@ class VirtualJoystick {
         this.thumb = document.getElementById(thumbId);
         
         this.options = {
-            baseRadius: this.container.offsetWidth / 2,
-            thumbRadius: this.thumb.offsetWidth / 2,
             maxDistance: this.container.offsetWidth / 2 - this.thumb.offsetWidth / 2 - 10,
+            deadZone: 0.1, // Мертвая зона (10%)
             ...options
         };
         
         this.active = false;
         this.x = 0;
         this.y = 0;
-        this.angle = 0;
-        this.distance = 0;
         this.callbacks = [];
         
         this.setupEvents();
-        this.updateThumbPosition();
+        this.resetThumb();
     }
     
     setupEvents() {
-        this.container.addEventListener('touchstart', (e) => this.handleStart(e), { passive: false });
-        this.container.addEventListener('touchmove', (e) => this.handleMove(e), { passive: false });
-        this.container.addEventListener('touchend', (e) => this.handleEnd(e), { passive: false });
-        this.container.addEventListener('touchcancel', (e) => this.handleEnd(e), { passive: false });
+        // Touch
+        this.container.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.handleStart(e);
+        }, { passive: false });
         
+        this.container.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            this.handleMove(e);
+        }, { passive: false });
+        
+        this.container.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            this.handleEnd(e);
+        }, { passive: false });
+        
+        this.container.addEventListener('touchcancel', (e) => {
+            e.preventDefault();
+            this.handleEnd(e);
+        }, { passive: false });
+        
+        // Mouse (для ПК)
         this.container.addEventListener('mousedown', (e) => this.handleStart(e));
         window.addEventListener('mousemove', (e) => this.handleMove(e));
         window.addEventListener('mouseup', (e) => this.handleEnd(e));
@@ -54,28 +68,23 @@ class VirtualJoystick {
     }
     
     handleStart(event) {
-        event.preventDefault();
         this.active = true;
         const pos = this.getPosition(event);
         this.update(pos.x, pos.y);
     }
     
     handleMove(event) {
-        event.preventDefault();
         if (!this.active) return;
         const pos = this.getPosition(event);
         this.update(pos.x, pos.y);
     }
     
     handleEnd(event) {
-        event.preventDefault();
         if (!this.active) return;
         this.active = false;
         this.x = 0;
         this.y = 0;
-        this.angle = 0;
-        this.distance = 0;
-        this.updateThumbPosition();
+        this.resetThumb();
         this.triggerCallbacks();
     }
     
@@ -88,39 +97,48 @@ class VirtualJoystick {
             dy = (dy / distance) * maxDist;
         }
         
-        this.x = dx / maxDist;
-        this.y = dy / maxDist;
-        this.distance = Math.min(distance / maxDist, 1);
-        this.angle = Math.atan2(dy, dx);
+        // Нормализуем от -1 до 1
+        let normX = dx / maxDist;
+        let normY = dy / maxDist;
         
-        this.updateThumbPosition();
+        // Dead zone
+        const dist = Math.hypot(normX, normY);
+        if (dist < this.options.deadZone) {
+            normX = 0;
+            normY = 0;
+        }
+        
+        this.x = normX;
+        this.y = normY;
+        
+        this.updateThumbPosition(normX, normY);
         this.triggerCallbacks();
     }
     
-    updateThumbPosition() {
+    updateThumbPosition(x, y) {
         const maxDist = this.options.maxDistance;
-        const x = (this.x * maxDist);
-        const y = (this.y * maxDist);
+        const px = x * maxDist;
+        const py = y * maxDist;
         
-        this.thumb.style.transform = `translate(${-50 + (x / this.container.offsetWidth * 100)}%, ${-50 + (y / this.container.offsetHeight * 100)}%)`;
+        const containerWidth = this.container.offsetWidth;
+        const containerHeight = this.container.offsetHeight;
+        
+        this.thumb.style.transform = `translate(${-50 + (px / containerWidth * 100)}%, ${-50 + (py / containerHeight * 100)}%)`;
+    }
+    
+    resetThumb() {
+        this.thumb.style.transform = 'translate(-50%, -50%)';
     }
     
     getDirection() {
-        if (this.distance < 0.1) {
-            return { x: 0, y: 0 };
-        }
         return {
             x: this.x,
             y: this.y
         };
     }
     
-    getAngle() {
-        return this.angle;
-    }
-    
     isActive() {
-        return this.active && this.distance > 0.1;
+        return this.active && (Math.abs(this.x) > 0.01 || Math.abs(this.y) > 0.01);
     }
     
     onMove(callback) {
@@ -130,7 +148,7 @@ class VirtualJoystick {
     triggerCallbacks() {
         const direction = this.getDirection();
         for (const callback of this.callbacks) {
-            callback(direction, this.angle, this.distance);
+            callback(direction);
         }
     }
 }
