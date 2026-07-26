@@ -5,7 +5,7 @@ class VirtualJoystick {
         
         this.options = {
             maxDistance: this.container.offsetWidth / 2 - this.thumb.offsetWidth / 2 - 10,
-            deadZone: 0.1, // Мертвая зона (10%)
+            deadZone: 0.15,
             ...options
         };
         
@@ -13,37 +13,61 @@ class VirtualJoystick {
         this.x = 0;
         this.y = 0;
         this.callbacks = [];
+        this.isTouching = false;
         
         this.setupEvents();
         this.resetThumb();
     }
     
     setupEvents() {
-        // Touch
+        // Touch events
         this.container.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            this.handleStart(e);
+            this.isTouching = true;
+            this.active = true;
+            const pos = this.getPosition(e);
+            this.update(pos.x, pos.y);
         }, { passive: false });
         
         this.container.addEventListener('touchmove', (e) => {
             e.preventDefault();
-            this.handleMove(e);
+            if (!this.active) return;
+            const pos = this.getPosition(e);
+            this.update(pos.x, pos.y);
         }, { passive: false });
         
         this.container.addEventListener('touchend', (e) => {
             e.preventDefault();
-            this.handleEnd(e);
+            this.isTouching = false;
+            this.active = false;
+            this.reset();
         }, { passive: false });
         
         this.container.addEventListener('touchcancel', (e) => {
             e.preventDefault();
-            this.handleEnd(e);
+            this.isTouching = false;
+            this.active = false;
+            this.reset();
         }, { passive: false });
         
-        // Mouse (для ПК)
-        this.container.addEventListener('mousedown', (e) => this.handleStart(e));
-        window.addEventListener('mousemove', (e) => this.handleMove(e));
-        window.addEventListener('mouseup', (e) => this.handleEnd(e));
+        // Mouse events (для ПК)
+        this.container.addEventListener('mousedown', (e) => {
+            this.active = true;
+            const pos = this.getPosition(e);
+            this.update(pos.x, pos.y);
+        });
+        
+        window.addEventListener('mousemove', (e) => {
+            if (!this.active) return;
+            const pos = this.getPosition(e);
+            this.update(pos.x, pos.y);
+        });
+        
+        window.addEventListener('mouseup', () => {
+            if (!this.active) return;
+            this.active = false;
+            this.reset();
+        });
     }
     
     getPosition(event) {
@@ -67,51 +91,37 @@ class VirtualJoystick {
         };
     }
     
-    handleStart(event) {
-        this.active = true;
-        const pos = this.getPosition(event);
-        this.update(pos.x, pos.y);
-    }
-    
-    handleMove(event) {
-        if (!this.active) return;
-        const pos = this.getPosition(event);
-        this.update(pos.x, pos.y);
-    }
-    
-    handleEnd(event) {
-        if (!this.active) return;
-        this.active = false;
-        this.x = 0;
-        this.y = 0;
-        this.resetThumb();
-        this.triggerCallbacks();
-    }
-    
     update(dx, dy) {
         const distance = Math.hypot(dx, dy);
         const maxDist = this.options.maxDistance;
         
-        if (distance > maxDist) {
-            dx = (dx / distance) * maxDist;
-            dy = (dy / distance) * maxDist;
-        }
-        
-        // Нормализуем от -1 до 1
         let normX = dx / maxDist;
         let normY = dy / maxDist;
+        
+        // Ограничиваем
+        if (distance > maxDist) {
+            normX = dx / distance;
+            normY = dy / distance;
+        }
         
         // Dead zone
         const dist = Math.hypot(normX, normY);
         if (dist < this.options.deadZone) {
-            normX = 0;
-            normY = 0;
+            this.x = 0;
+            this.y = 0;
+        } else {
+            this.x = normX;
+            this.y = normY;
         }
         
-        this.x = normX;
-        this.y = normY;
-        
-        this.updateThumbPosition(normX, normY);
+        this.updateThumbPosition(this.x, this.y);
+        this.triggerCallbacks();
+    }
+    
+    reset() {
+        this.x = 0;
+        this.y = 0;
+        this.resetThumb();
         this.triggerCallbacks();
     }
     
