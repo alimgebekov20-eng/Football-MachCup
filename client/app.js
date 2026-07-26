@@ -490,7 +490,7 @@ class FootballGame {
         this.resizeCanvas();
         this.gameOverModal.classList.remove('active');
         
-        // 👇 ОБРАТНЫЙ ОТСЧЁТ 5 СЕКУНД
+        // Обратный отсчёт 5 секунд
         let countdown = 5;
         this.timerElement.textContent = '⚡' + countdown;
         this.timerElement.style.color = '#ffd700';
@@ -527,7 +527,7 @@ class FootballGame {
                 this.kickBtn.style.opacity = '1';
                 this.tackleBtn.style.opacity = '1';
                 
-                // ✅ СБРАСЫВАЕМ ДВИЖЕНИЕ (гарантированно)
+                // Сбрасываем движение
                 this.moveState = {
                     x: this.canvas.width / 2,
                     y: this.canvas.height / 2
@@ -650,32 +650,12 @@ class FootballGame {
         const isMoving = Math.abs(direction.x) > 0.05 || Math.abs(direction.y) > 0.05;
         
         if (!isMoving) {
-            // ✅ ОТПРАВЛЯЕМ ЦЕНТР ПОЛЯ, ЧТОБЫ ИГРОК СТОЯЛ
             this.moveState = {
                 x: this.canvas.width / 2,
                 y: this.canvas.height / 2
             };
             return;
         }
-        
-        const fieldWidth = this.canvas.width;
-        const fieldHeight = this.canvas.height;
-        const margin = 35;
-        
-        const maxOffsetX = fieldWidth * 0.25;
-        const maxOffsetY = fieldHeight * 0.25;
-        
-        let targetX = fieldWidth / 2 + direction.x * maxOffsetX;
-        let targetY = fieldHeight / 2 + direction.y * maxOffsetY;
-        
-        targetX = Math.max(margin, Math.min(fieldWidth - margin, targetX));
-        targetY = Math.max(margin, Math.min(fieldHeight - margin, targetY));
-        
-        this.moveState = {
-            x: targetX,
-            y: targetY
-        };
-    }
         
         const fieldWidth = this.canvas.width;
         const fieldHeight = this.canvas.height;
