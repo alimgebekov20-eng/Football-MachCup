@@ -4,7 +4,8 @@ class GameLogic {
     this.isRunning = false;
     this.timer = 120;
     this.timerInterval = null;
-    this.updateInterval = null; // Интервал для обновления физики
+    this.updateInterval = null;
+    this.broadcastInterval = null; // 👈 ДЛЯ АВТО-РАССЫЛКИ
 
     this.players = new Map();
 
@@ -91,8 +92,18 @@ class GameLogic {
   // Завершить игру
   endGame() {
     this.isRunning = false;
-    if (this.timerInterval) clearInterval(this.timerInterval);
-    if (this.updateInterval) clearInterval(this.updateInterval);
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+      this.timerInterval = null;
+    }
+    if (this.updateInterval) {
+      clearInterval(this.updateInterval);
+      this.updateInterval = null;
+    }
+    if (this.broadcastInterval) {
+      clearInterval(this.broadcastInterval);
+      this.broadcastInterval = null;
+    }
     console.log(`🏁 Игра ${this.gameId} завершена`);
   }
 
