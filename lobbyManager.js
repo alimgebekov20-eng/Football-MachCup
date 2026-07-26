@@ -125,6 +125,7 @@ class LobbyManager {
 
   removeLobby(id) {
     this.lobbies.delete(id);
+    console.log(`🗑️ Лобби ${id} удалено`);
   }
 
   getPublicLobbies() {
@@ -144,6 +145,19 @@ class LobbyManager {
       }
     }
     return null;
+  }
+
+  cleanupEmptyLobbies() {
+    const toRemove = [];
+    for (const [id, lobby] of this.lobbies) {
+      if (lobby.isEmpty()) {
+        toRemove.push(id);
+      }
+    }
+    for (const id of toRemove) {
+      this.removeLobby(id);
+    }
+    return toRemove.length;
   }
 }
 
