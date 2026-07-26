@@ -195,34 +195,34 @@ class FootballGame {
     
     // ===== ОБРАБОТКА СООБЩЕНИЙ =====
     handleWebSocketMessage(data) {
-        switch (data.type) {
-            case 'auth_success':
-                this.playerId = data.playerId;
-                this.displayName.textContent = data.playerName;
-                this.displayId.textContent = `ID: ${data.playerId.slice(0, 8)}`;
-                this.showScreen('menuScreen');
-                break;
-                
-            case 'auth_error':
-                alert(data.message);
-                break;
-                
-            case 'lobby_created':
-                this.lobbyId = data.lobbyId;
-                this.isHost = true;
-                this.lobbyCode.textContent = data.lobbyCode;
-                this.updateLobbyUI(data);
-                this.showScreen('lobbyScreen');
-                this.handleFindLobbies();
-                break;
-                
-            case 'lobby_joined':
-                this.lobbyId = data.lobbyId;
-                this.team = data.team;
-                this.isHost = false;
-                this.updateLobbyUI(data);
-                this.showScreen('lobbyScreen');
-                break;
+    switch (data.type) {
+        case 'auth_success':
+            this.playerId = data.playerId;
+            this.displayName.textContent = data.playerName;
+            this.displayId.textContent = `ID: ${data.playerId.slice(0, 8)}`;
+            this.showScreen('menuScreen');
+            break;
+            
+        case 'auth_error':
+            alert(data.message);
+            break;
+            
+        case 'lobby_created':
+            this.lobbyId = data.lobbyId;
+            this.isHost = true;
+            this.lobbyCode.textContent = data.lobbyCode;
+            this.updateLobbyUI(data);
+            this.showScreen('lobbyScreen');
+            // ✅ УБРАЛИ this.handleFindLobbies();
+            break;
+            
+        case 'lobby_joined':
+            this.lobbyId = data.lobbyId;
+            this.team = data.team;
+            this.isHost = false;
+            this.updateLobbyUI(data);
+            this.showScreen('lobbyScreen');
+            break;
                 
             case 'lobby_update':
                 this.updateLobbyUI(data);
