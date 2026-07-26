@@ -19,7 +19,7 @@ const lobbyManager = new LobbyManager();
 
 wss.on('connection', (ws) => {
   console.log('Новый игрок подключился');
-  
+
   ws.send(JSON.stringify({
     type: 'connected',
     message: 'Добро пожаловать в футбольную игру!'
@@ -46,7 +46,7 @@ wss.on('connection', (ws) => {
 
 function handleMessage(ws, data) {
   const player = players.get(ws);
-  
+
   switch (data.type) {
     case 'auth':
       handleAuth(ws, data);
@@ -67,30 +67,20 @@ function handleMessage(ws, data) {
       handleStartGame(ws);
       break;
     case 'game_action':
-      if (player && player.gameId) {
-        handleGameAction(ws, data);
-      }
+      if (player && player.gameId) handleGameAction(ws, data);
       break;
     case 'player_movement':
-      if (player && player.gameId) {
-        handlePlayerMovement(ws, data);
-      }
+      if (player && player.gameId) handlePlayerMovement(ws, data);
       break;
     default:
-      console.log('Неизвестный тип сообщения:', data.type);
-      ws.send(JSON.stringify({
-        type: 'error',
-        message: 'Неизвестный тип сообщения'
-      }));
+      console.log('Неизвестный тип:', data.type);
+      ws.send(JSON.stringify({ type: 'error', message: 'Неизвестный тип сообщения' }));
   }
 }
 
 function handleAuth(ws, data) {
   if (!data.playerName || data.playerName.trim() === '') {
-    ws.send(JSON.stringify({
-      type: 'auth_error',
-      message: 'Имя не может быть пустым'
-    }));
+    ws.send(JSON.stringify({ type: 'auth_error', message: 'Имя не может быть пустым' }));
     return;
   }
 
@@ -110,40 +100,21 @@ function handleAuth(ws, data) {
     playerName: data.playerName.trim()
   }));
 
-  console.log(`✅ Игрок ${data.playerName.trim()} (${playerId}) авторизован`);
+  console.log(`✅ Игрок ${data.playerName.trim()} авторизован`);
 }
 
 function handleCreateLobby(ws, data) {
   const player = players.get(ws);
-  if (!player) {
-    ws.send(JSON.stringify({
-      type: 'error',
-      message: 'Сначала авторизуйтесь'
-    }));
-    return;
-  }
-
+  if (!player) return ws.send(JSON.stringify({ type: 'error', message: 'Авторизуйтесь' }));
   if (!data.mode || !['1v1', '2v2'].includes(data.mode)) {
-    ws.send(JSON.stringify({
-      type: 'error',
-      message: 'Выберите режим: 1v1 или 2v2'
-    }));
-    return;
+    return ws.send(JSON.stringify({ type: 'error', message: 'Выберите режим: 1v1 или 2v2' }));
   }
-
-  if (player.lobbyId) {
-    ws.send(JSON.stringify({
-      type: 'error',
-      message: 'Вы уже находитесь в лобби'
-    }));
-    return;
-  }
+  if (player.lobbyId) return ws.send(JSON.stringify({ type: 'error', message: 'Вы уже в лобби' }));
 
   const lobbyId = generateLobbyId();
   const maxPlayers = data.mode === '1v1' ? 2 : 4;
-  
   const lobby = lobbyManager.createLobby(lobbyId, player.id, player.name, maxPlayers);
-  
+
   player.lobbyId = lobbyId;
   player.isHost = true;
 
@@ -156,78 +127,28 @@ function handleCreateLobby(ws, data) {
     players: lobby.getPlayers()
   }));
 
-  console.log(`🏠 Лобби ${lobbyId} создано игроком ${player.name} (режим: ${data.mode})`);
-  
+  console.log(`🏠 Лобби ${lobbyId} создано (${data.mode})`);
   broadcastLobbyList();
 }
 
 function handleGetLobbies(ws) {
   const lobbies = lobbyManager.getPublicLobbies();
-  ws.send(JSON.stringify({
-    type: 'lobbies_list',
-    lobbies: lobbies
-  }));
+  ws.send(JSON.stringify({ type: 'lobbies_list', lobbies: lobbies }));
 }
 
 function handleJoinLobby(ws, data) {
   const player = players.get(ws);
-  if (!player) {
-    ws.send(JSON.stringify({
-      type: 'error',
-      message: 'Сначала авторизуйтесь'
-    }));
-    return;
-  }
-
-  if (!data.lobbyId) {
-    ws.send(JSON.stringify({
-      type: 'error',
-      message: 'Укажите ID лобби'
-    }));
-    return;
-  }
-
-  if (player.lobbyId) {
-    ws.send(JSON.stringify({
-      type: 'error',
-      message: 'Вы уже в лобби'
-    }));
-    return;
-  }
+  if (!player) return ws.send(JSON.stringify({ type: 'error', message: 'Авторизуйтесь' }));
+  if (!data.lobbyId) return ws.send(JSON.stringify({ type: 'error', message: 'Укажите ID лобби' }));
+  if (player.lobbyId) return ws.send(JSON.stringify({ type: 'error', message: 'Вы уже в лобби' }));
 
   const lobby = lobbyManager.getLobby(data.lobbyId);
-  if (!lobby) {
-    ws.send(JSON.stringify({
-      type: 'error',
-      message: 'Лобби не найдено'
-    }));
-    return;
-  }
-
-  if (lobby.isFull()) {
-    ws.send(JSON.stringify({
-      type: 'error',
-      message: 'Лобби заполнено'
-    }));
-    return;
-  }
-
-  if (lobby.isGameStarted()) {
-    ws.send(JSON.stringify({
-      type: 'error',
-      message: 'Игра уже началась'
-    }));
-    return;
-  }
+  if (!lobby) return ws.send(JSON.stringify({ type: 'error', message: 'Лобби не найдено' }));
+  if (lobby.isFull()) return ws.send(JSON.stringify({ type: 'error', message: 'Лобби заполнено' }));
+  if (lobby.isGameStarted()) return ws.send(JSON.stringify({ type: 'error', message: 'Игра уже началась' }));
 
   const team = lobby.addPlayer(player.id, player.name);
-  if (!team) {
-    ws.send(JSON.stringify({
-      type: 'error',
-      message: 'Не удалось присоединиться'
-    }));
-    return;
-  }
+  if (!team) return ws.send(JSON.stringify({ type: 'error', message: 'Не удалось присоединиться' }));
 
   player.lobbyId = data.lobbyId;
   player.isHost = false;
@@ -240,8 +161,7 @@ function handleJoinLobby(ws, data) {
     hostId: lobby.getHostId()
   }));
 
-  console.log(`👤 Игрок ${player.name} присоединился к лобби ${data.lobbyId}`);
-  
+  console.log(`👤 ${player.name} присоединился к ${data.lobbyId}`);
   broadcastLobbyUpdate(data.lobbyId);
   broadcastLobbyList();
 }
@@ -252,10 +172,9 @@ function handleLeaveLobby(ws) {
 
   const lobbyId = player.lobbyId;
   const lobby = lobbyManager.getLobby(lobbyId);
-  
+
   if (lobby) {
     lobby.removePlayer(player.id);
-    
     if (lobby.isEmpty()) {
       lobbyManager.removeLobby(lobbyId);
       console.log(`🗑️ Лобби ${lobbyId} удалено (пустое)`);
@@ -273,68 +192,36 @@ function handleLeaveLobby(ws) {
 
   player.lobbyId = null;
   player.isHost = false;
-
-  ws.send(JSON.stringify({
-    type: 'left_lobby'
-  }));
-
+  ws.send(JSON.stringify({ type: 'left_lobby' }));
   broadcastLobbyList();
-  console.log(`🚪 Игрок ${player.name} вышел из лобби ${lobbyId}`);
 }
 
+// ===================== ГЛАВНОЕ ИСПРАВЛЕНИЕ =====================
 function handleStartGame(ws) {
   const player = players.get(ws);
   if (!player || !player.lobbyId) {
-    ws.send(JSON.stringify({
-      type: 'error',
-      message: 'Вы не в лобби'
-    }));
-    return;
+    return ws.send(JSON.stringify({ type: 'error', message: 'Вы не в лобби' }));
   }
-
   if (!player.isHost) {
-    ws.send(JSON.stringify({
-      type: 'error',
-      message: 'Только хост может начать игру'
-    }));
-    return;
+    return ws.send(JSON.stringify({ type: 'error', message: 'Только хост может начать игру' }));
   }
 
   const lobby = lobbyManager.getLobby(player.lobbyId);
-  if (!lobby) {
-    ws.send(JSON.stringify({
-      type: 'error',
-      message: 'Лобби не найдено'
-    }));
-    return;
-  }
+  if (!lobby) return ws.send(JSON.stringify({ type: 'error', message: 'Лобби не найдено' }));
+  if (lobby.isGameStarted()) return ws.send(JSON.stringify({ type: 'error', message: 'Игра уже началась' }));
+  if (!lobby.isReadyToStart()) return ws.send(JSON.stringify({ type: 'error', message: 'Недостаточно игроков' }));
 
-  if (lobby.isGameStarted()) {
-    ws.send(JSON.stringify({
-      type: 'error',
-      message: 'Игра уже началась'
-    }));
-    return;
-  }
-
-  if (!lobby.isReadyToStart()) {
-    ws.send(JSON.stringify({
-      type: 'error',
-      message: 'Недостаточно игроков'
-    }));
-    return;
-  }
+  console.log(`🎯 Хост ${player.name} запускает игру в ${player.lobbyId}`);
 
   const gameId = generateGameId();
   const game = new GameLogic(gameId);
-  
+
   const playersInLobby = lobby.getPlayers();
-  playersInLobby.forEach(p => {
-    game.addPlayer(p.id, p.name, p.team);
-  });
-  
+  playersInLobby.forEach(p => game.addPlayer(p.id, p.name, p.team));
+
   games.set(gameId, game);
-  
+
+  // Обновляем данные игроков
   playersInLobby.forEach(p => {
     const playerWs = findPlayerWebSocket(p.id);
     if (playerWs) {
@@ -346,16 +233,26 @@ function handleStartGame(ws) {
     }
   });
 
+  // ЗАПУСКАЕМ ИГРУ (таймер + физика)
   game.startGame();
-  
+
+  // ОТПРАВЛЯЕМ КАЖДОМУ ИГРОКУ
   playersInLobby.forEach(p => {
     const playerWs = findPlayerWebSocket(p.id);
-    if (playerWs) {
+    if (playerWs && playerWs.readyState === WebSocket.OPEN) {
+      // 1. Сообщение о старте
       playerWs.send(JSON.stringify({
         type: 'game_started',
         gameId: gameId,
         team: p.team,
         duration: 120
+      }));
+
+      // 2. Сразу отправляем состояние (игроки, мяч, таймер)
+      const state = game.getState();
+      playerWs.send(JSON.stringify({
+        type: 'game_state',
+        state: state
       }));
     }
   });
@@ -363,32 +260,25 @@ function handleStartGame(ws) {
   lobbyManager.removeLobby(player.lobbyId);
   broadcastLobbyList();
 
-  console.log(`🎮 Игра ${gameId} началась! Игроков: ${playersInLobby.length}`);
+  console.log(`🎮 ИГРА ${gameId} УСПЕШНО ЗАПУЩЕНА! Игроков: ${playersInLobby.length}`);
 }
+// ================================================================
 
 function handleGameAction(ws, data) {
   const player = players.get(ws);
   if (!player || !player.gameId) return;
-
   const game = games.get(player.gameId);
   if (!game || !game.isRunning) return;
 
-  switch (data.action) {
-    case 'kick':
-      game.playerKick(player.id);
-      break;
-    case 'tackle':
-      game.playerTackle(player.id);
-      break;
-  }
-  
+  if (data.action === 'kick') game.playerKick(player.id);
+  else if (data.action === 'tackle') game.playerTackle(player.id);
+
   broadcastGameState(player.gameId);
 }
 
 function handlePlayerMovement(ws, data) {
   const player = players.get(ws);
   if (!player || !player.gameId) return;
-
   const game = games.get(player.gameId);
   if (!game || !game.isRunning) return;
 
@@ -399,16 +289,14 @@ function handleDisconnect(ws) {
   const player = players.get(ws);
   if (!player) return;
 
-  console.log(`❌ Игрок ${player.name} отключился`);
+  console.log(`❌ ${player.name} отключился`);
 
   if (player.lobbyId) {
     const lobby = lobbyManager.getLobby(player.lobbyId);
     if (lobby) {
       lobby.removePlayer(player.id);
-      
       if (lobby.isEmpty()) {
         lobbyManager.removeLobby(player.lobbyId);
-        console.log(`🗑️ Лобби ${player.lobbyId} удалено (игрок отключился)`);
       } else {
         if (player.isHost) {
           const newHost = lobby.assignNewHost();
@@ -427,34 +315,28 @@ function handleDisconnect(ws) {
     const game = games.get(player.gameId);
     if (game) {
       game.removePlayer(player.id);
-      if (game.players.size === 0) {
-        games.delete(player.gameId);
-      } else {
-        broadcastGameState(player.gameId);
-      }
+      if (game.players.size === 0) games.delete(player.gameId);
+      else broadcastGameState(player.gameId);
     }
   }
 
   players.delete(ws);
 }
 
+// Вспомогательные функции
 function generatePlayerId() {
   return 'p_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
 }
-
 function generateLobbyId() {
   return 'L' + Math.random().toString(36).substr(2, 6).toUpperCase();
 }
-
 function generateGameId() {
   return 'G_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
 }
 
 function findPlayerWebSocket(playerId) {
   for (const [ws, player] of players) {
-    if (player.id === playerId) {
-      return ws;
-    }
+    if (player.id === playerId) return ws;
   }
   return null;
 }
@@ -463,10 +345,7 @@ function broadcastLobbyList() {
   const lobbies = lobbyManager.getPublicLobbies();
   for (const [ws, player] of players) {
     if (ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({
-        type: 'lobbies_list',
-        lobbies: lobbies
-      }));
+      ws.send(JSON.stringify({ type: 'lobbies_list', lobbies: lobbies }));
     }
   }
 }
@@ -474,7 +353,6 @@ function broadcastLobbyList() {
 function broadcastLobbyUpdate(lobbyId) {
   const lobby = lobbyManager.getLobby(lobbyId);
   if (!lobby) return;
-
   const playersInLobby = lobby.getPlayers();
   playersInLobby.forEach(p => {
     const ws = findPlayerWebSocket(p.id);
@@ -493,7 +371,6 @@ function broadcastLobbyUpdate(lobbyId) {
 function notifyNewHost(lobbyId, newHostId) {
   const lobby = lobbyManager.getLobby(lobbyId);
   if (!lobby) return;
-
   const playersInLobby = lobby.getPlayers();
   playersInLobby.forEach(p => {
     const ws = findPlayerWebSocket(p.id);
@@ -510,7 +387,6 @@ function notifyNewHost(lobbyId, newHostId) {
 function broadcastGameState(gameId) {
   const game = games.get(gameId);
   if (!game) return;
-
   const state = game.getState();
   game.players.forEach((player, playerId) => {
     const ws = findPlayerWebSocket(playerId);
