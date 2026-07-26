@@ -650,29 +650,32 @@ class FootballGame {
         const isMoving = Math.abs(direction.x) > 0.05 || Math.abs(direction.y) > 0.05;
         
         if (!isMoving) {
-            let myPlayer = null;
-            for (const id in this.players) {
-                if (this.players[id].id === this.playerId) {
-                    myPlayer = this.players[id];
-                    break;
-                }
-            }
-            
-            if (myPlayer && myPlayer.x !== undefined && myPlayer.y !== undefined) {
-                const px = (myPlayer.x / 800) * this.canvas.width;
-                const py = (myPlayer.y / 600) * this.canvas.height;
-                this.moveState = {
-                    x: px,
-                    y: py
-                };
-            } else {
-                this.moveState = {
-                    x: this.canvas.width / 2,
-                    y: this.canvas.height / 2
-                };
-            }
+            // ✅ ОТПРАВЛЯЕМ ЦЕНТР ПОЛЯ, ЧТОБЫ ИГРОК СТОЯЛ
+            this.moveState = {
+                x: this.canvas.width / 2,
+                y: this.canvas.height / 2
+            };
             return;
         }
+        
+        const fieldWidth = this.canvas.width;
+        const fieldHeight = this.canvas.height;
+        const margin = 35;
+        
+        const maxOffsetX = fieldWidth * 0.25;
+        const maxOffsetY = fieldHeight * 0.25;
+        
+        let targetX = fieldWidth / 2 + direction.x * maxOffsetX;
+        let targetY = fieldHeight / 2 + direction.y * maxOffsetY;
+        
+        targetX = Math.max(margin, Math.min(fieldWidth - margin, targetX));
+        targetY = Math.max(margin, Math.min(fieldHeight - margin, targetY));
+        
+        this.moveState = {
+            x: targetX,
+            y: targetY
+        };
+    }
         
         const fieldWidth = this.canvas.width;
         const fieldHeight = this.canvas.height;
