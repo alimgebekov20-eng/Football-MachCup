@@ -14,7 +14,7 @@ class FootballGame {
         this.score = { team1: 0, team2: 0 };
         this.isFullscreen = false;
         this._hasReceivedState = false;
-        this._canMove = false; // 👈 НОВАЯ ПЕРЕМЕННАЯ
+        this._canMove = false;
         
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
@@ -315,7 +315,6 @@ class FootballGame {
             case 'game_state':
                 console.log('📊 СОСТОЯНИЕ ИГРЫ:', data.state);
                 this._hasReceivedState = true;
-                this._canMove = true; // 👈 РАЗРЕШАЕМ ДВИЖЕНИЕ
                 this.updateGameState(data.state);
                 break;
                 
@@ -482,7 +481,7 @@ class FootballGame {
         this.timer = data.duration || 120;
         this.team = data.team;
         this._hasReceivedState = false;
-        this._canMove = false; // 👈 ЗАПРЕЩАЕМ ДВИЖЕНИЕ ДО ПОЛУЧЕНИЯ ДАННЫХ
+        this._canMove = false;
         
         this.team1Name.textContent = this.team === 'team1' ? '👤 Вы' : '👤 Соперник';
         this.team2Name.textContent = this.team === 'team2' ? '👤 Вы' : '👤 Соперник';
@@ -491,10 +490,52 @@ class FootballGame {
         this.resizeCanvas();
         this.gameOverModal.classList.remove('active');
         
+        // 👇 ОБРАТНЫЙ ОТСЧЁТ 5 СЕКУНД
+        let countdown = 5;
+        this.timerElement.textContent = '⚡' + countdown;
+        this.timerElement.style.color = '#ffd700';
+        this.timerElement.style.fontSize = '3rem';
+        
+        this.kickBtn.disabled = true;
+        this.tackleBtn.disabled = true;
+        this.kickBtn.style.opacity = '0.5';
+        this.tackleBtn.style.opacity = '0.5';
+        
         this.moveState = {
             x: this.canvas.width / 2,
             y: this.canvas.height / 2
         };
+        
+        const countdownInterval = setInterval(() => {
+            countdown--;
+            if (countdown > 0) {
+                this.timerElement.textContent = '⚡' + countdown;
+                this.timerElement.style.color = '#ffd700';
+                this.timerElement.style.transform = 'scale(1.3)';
+                setTimeout(() => {
+                    this.timerElement.style.transform = 'scale(1)';
+                }, 200);
+            } else {
+                clearInterval(countdownInterval);
+                this.timerElement.textContent = this.timer;
+                this.timerElement.style.color = '#f5576c';
+                this.timerElement.style.fontSize = '1.8rem';
+                
+                this._canMove = true;
+                this.kickBtn.disabled = false;
+                this.tackleBtn.disabled = false;
+                this.kickBtn.style.opacity = '1';
+                this.tackleBtn.style.opacity = '1';
+                
+                // ✅ СБРАСЫВАЕМ ДВИЖЕНИЕ (гарантированно)
+                this.moveState = {
+                    x: this.canvas.width / 2,
+                    y: this.canvas.height / 2
+                };
+                
+                console.log('🚀 МАТЧ НАЧАЛСЯ! Движение разрешено');
+            }
+        }, 1000);
         
         this.startMovementLoop();
         
@@ -538,7 +579,6 @@ class FootballGame {
         }
         
         this.moveInterval = setInterval(() => {
-            // 👇 ОТПРАВЛЯЕМ ТОЛЬКО ЕСЛИ РАЗРЕШЕНО
             if (this.isRunning && this.ws && this.ws.readyState === WebSocket.OPEN && this._canMove) {
                 this.ws.send(JSON.stringify({
                     type: 'player_movement',
@@ -553,7 +593,6 @@ class FootballGame {
         if (!state) return;
         
         this._hasReceivedState = true;
-        this._canMove = true; // 👈 РАЗРЕШАЕМ ДВИЖЕНИЕ
         
         if (state.players && state.players.length > 0) {
             this.players = {};
@@ -611,7 +650,6 @@ class FootballGame {
         const isMoving = Math.abs(direction.x) > 0.05 || Math.abs(direction.y) > 0.05;
         
         if (!isMoving) {
-            // Находим своего игрока
             let myPlayer = null;
             for (const id in this.players) {
                 if (this.players[id].id === this.playerId) {
@@ -621,7 +659,6 @@ class FootballGame {
             }
             
             if (myPlayer && myPlayer.x !== undefined && myPlayer.y !== undefined) {
-                // Отправляем текущую позицию игрока (стоять на месте)
                 const px = (myPlayer.x / 800) * this.canvas.width;
                 const py = (myPlayer.y / 600) * this.canvas.height;
                 this.moveState = {
@@ -720,7 +757,6 @@ class FootballGame {
         
         ctx.clearRect(0, 0, w, h);
         
-        // --- ПОЛЕ ---
         const gradient = ctx.createLinearGradient(0, 0, 0, h);
         gradient.addColorStop(0, '#2d8a4e');
         gradient.addColorStop(0.5, '#3ca55c');
@@ -728,7 +764,6 @@ class FootballGame {
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, w, h);
         
-        // Полосы
         ctx.strokeStyle = 'rgba(255,255,255,0.08)';
         ctx.lineWidth = 1;
         for (let i = 0; i < h; i += 40) {
@@ -738,7 +773,6 @@ class FootballGame {
             ctx.stroke();
         }
         
-        // --- РАЗМЕТКА ---
         ctx.strokeStyle = 'rgba(255,255,255,0.4)';
         ctx.lineWidth = 2;
         
@@ -756,13 +790,11 @@ class FootballGame {
         ctx.fillStyle = 'rgba(255,255,255,0.4)';
         ctx.fill();
         
-        // --- ВОРОТА ---
         const goalWidth = 50;
         const goalHeight = h * 0.2;
         const goalY = h/2 - goalHeight/2;
         const goalDepth = 15;
         
-        // Левые ворота
         ctx.strokeStyle = 'rgba(255,255,255,0.7)';
         ctx.lineWidth = 3;
         ctx.beginPath();
@@ -788,7 +820,6 @@ class FootballGame {
             ctx.stroke();
         }
         
-        // Правые ворота
         ctx.strokeStyle = 'rgba(255,255,255,0.7)';
         ctx.lineWidth = 3;
         ctx.beginPath();
@@ -813,7 +844,6 @@ class FootballGame {
             ctx.stroke();
         }
         
-        // --- ШТРАФНЫЕ ---
         ctx.strokeStyle = 'rgba(255,255,255,0.25)';
         ctx.lineWidth = 2;
         const penaltyWidth = 80;
@@ -822,7 +852,6 @@ class FootballGame {
         ctx.strokeRect(0, penaltyY, penaltyWidth, penaltyHeight);
         ctx.strokeRect(w - penaltyWidth, penaltyY, penaltyWidth, penaltyHeight);
         
-        // --- МЯЧ ---
         if (this.ball && this.ball.x !== undefined) {
             const bx = (this.ball.x / 800) * w;
             const by = (this.ball.y / 600) * h;
@@ -862,7 +891,6 @@ class FootballGame {
             ctx.stroke();
         }
         
-        // --- ИГРОКИ ---
         const playersList = Object.values(this.players);
         if (playersList.length > 0) {
             playersList.forEach(player => {
