@@ -196,7 +196,7 @@ function handleLeaveLobby(ws) {
   broadcastLobbyList();
 }
 
-// ===================== ГЛАВНОЕ ИСПРАВЛЕНИЕ =====================
+// ===================== ГЛАВНАЯ ФУНКЦИЯ СТАРТА ИГРЫ =====================
 function handleStartGame(ws) {
   const player = players.get(ws);
   if (!player || !player.lobbyId) {
@@ -221,7 +221,6 @@ function handleStartGame(ws) {
 
   games.set(gameId, game);
 
-  // Обновляем данные игроков
   playersInLobby.forEach(p => {
     const playerWs = findPlayerWebSocket(p.id);
     if (playerWs) {
@@ -236,11 +235,20 @@ function handleStartGame(ws) {
   // ЗАПУСКАЕМ ИГРУ (таймер + физика)
   game.startGame();
 
+  // ✅ АВТОМАТИЧЕСКАЯ РАССЫЛКА СОСТОЯНИЯ КАЖДЫЕ 50мс
+  const broadcastInterval = setInterval(() => {
+    if (!game.isRunning) {
+      clearInterval(broadcastInterval);
+      return;
+    }
+    broadcastGameState(gameId);
+  }, 50);
+  game.broadcastInterval = broadcastInterval;
+
   // ОТПРАВЛЯЕМ КАЖДОМУ ИГРОКУ
   playersInLobby.forEach(p => {
     const playerWs = findPlayerWebSocket(p.id);
     if (playerWs && playerWs.readyState === WebSocket.OPEN) {
-      // 1. Сообщение о старте
       playerWs.send(JSON.stringify({
         type: 'game_started',
         gameId: gameId,
@@ -248,7 +256,6 @@ function handleStartGame(ws) {
         duration: 120
       }));
 
-      // 2. Сразу отправляем состояние (игроки, мяч, таймер)
       const state = game.getState();
       playerWs.send(JSON.stringify({
         type: 'game_state',
@@ -262,7 +269,7 @@ function handleStartGame(ws) {
 
   console.log(`🎮 ИГРА ${gameId} УСПЕШНО ЗАПУЩЕНА! Игроков: ${playersInLobby.length}`);
 }
-// ================================================================
+// =====================================================================
 
 function handleGameAction(ws, data) {
   const player = players.get(ws);
