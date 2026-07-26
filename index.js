@@ -10,16 +10,13 @@ const app = express();
 const server = createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// Middleware
 app.use(cors());
-app.use(express.static(path.join(__dirname, 'client'))); // ← ПУТЬ ИЗМЕНИЛСЯ
+app.use(express.static(path.join(__dirname, 'client')));
 
-// Состояние сервера
 const games = new Map();
 const players = new Map();
 const lobbyManager = new LobbyManager();
 
-// WebSocket соединение
 wss.on('connection', (ws) => {
   console.log('Новый игрок подключился');
   
@@ -47,7 +44,6 @@ wss.on('connection', (ws) => {
   });
 });
 
-// Обработчик сообщений
 function handleMessage(ws, data) {
   const player = players.get(ws);
   
@@ -89,7 +85,6 @@ function handleMessage(ws, data) {
   }
 }
 
-// ===== АУТЕНТИФИКАЦИЯ =====
 function handleAuth(ws, data) {
   if (!data.playerName || data.playerName.trim() === '') {
     ws.send(JSON.stringify({
@@ -118,7 +113,6 @@ function handleAuth(ws, data) {
   console.log(`✅ Игрок ${data.playerName.trim()} (${playerId}) авторизован`);
 }
 
-// ===== СОЗДАНИЕ ЛОББИ =====
 function handleCreateLobby(ws, data) {
   const player = players.get(ws);
   if (!player) {
@@ -167,7 +161,6 @@ function handleCreateLobby(ws, data) {
   broadcastLobbyList();
 }
 
-// ===== ПОЛУЧЕНИЕ СПИСКА ЛОББИ =====
 function handleGetLobbies(ws) {
   const lobbies = lobbyManager.getPublicLobbies();
   ws.send(JSON.stringify({
@@ -176,7 +169,6 @@ function handleGetLobbies(ws) {
   }));
 }
 
-// ===== ПРИСОЕДИНЕНИЕ К ЛОББИ =====
 function handleJoinLobby(ws, data) {
   const player = players.get(ws);
   if (!player) {
@@ -254,7 +246,6 @@ function handleJoinLobby(ws, data) {
   broadcastLobbyList();
 }
 
-// ===== ВЫХОД ИЗ ЛОББИ =====
 function handleLeaveLobby(ws) {
   const player = players.get(ws);
   if (!player || !player.lobbyId) return;
@@ -291,7 +282,6 @@ function handleLeaveLobby(ws) {
   console.log(`🚪 Игрок ${player.name} вышел из лобби ${lobbyId}`);
 }
 
-// ===== СТАРТ ИГРЫ =====
 function handleStartGame(ws) {
   const player = players.get(ws);
   if (!player || !player.lobbyId) {
@@ -376,7 +366,6 @@ function handleStartGame(ws) {
   console.log(`🎮 Игра ${gameId} началась! Игроков: ${playersInLobby.length}`);
 }
 
-// ===== ИГРОВЫЕ ДЕЙСТВИЯ =====
 function handleGameAction(ws, data) {
   const player = players.get(ws);
   if (!player || !player.gameId) return;
@@ -406,7 +395,6 @@ function handlePlayerMovement(ws, data) {
   game.updatePlayerPosition(player.id, data.x, data.y);
 }
 
-// ===== ОТКЛЮЧЕНИЕ =====
 function handleDisconnect(ws) {
   const player = players.get(ws);
   if (!player) return;
@@ -420,6 +408,7 @@ function handleDisconnect(ws) {
       
       if (lobby.isEmpty()) {
         lobbyManager.removeLobby(player.lobbyId);
+        console.log(`🗑️ Лобби ${player.lobbyId} удалено (игрок отключился)`);
       } else {
         if (player.isHost) {
           const newHost = lobby.assignNewHost();
@@ -449,7 +438,6 @@ function handleDisconnect(ws) {
   players.delete(ws);
 }
 
-// ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====
 function generatePlayerId() {
   return 'p_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
 }
@@ -535,7 +523,6 @@ function broadcastGameState(gameId) {
   });
 }
 
-// Запуск сервера
 const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
   console.log(`🚀 Сервер запущен на порту ${PORT}`);
