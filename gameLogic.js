@@ -4,282 +4,297 @@ class GameLogic {
     this.isRunning = false;
     this.timer = 120;
     this.timerInterval = null;
-    
+    this.updateInterval = null; // Интервал для обновления физики
+
     this.players = new Map();
-    
+
     this.ball = {
       x: 400,
       y: 300,
       vx: 0,
       vy: 0,
-      radius: 8
+      radius: 10,
     };
-    
+
     this.field = {
       width: 800,
       height: 600,
-      goalWidth: 100,
-      goalHeight: 40
+      goalWidth: 80,
+      goalHeight: 120,
     };
-    
+
     this.score = {
       team1: 0,
-      team2: 0
+      team2: 0,
     };
   }
 
+  // Добавить игрока
   addPlayer(playerId, playerName, team) {
-    const x = team === 'team1' ? 150 : 650;
-    const y = 300 + (this.players.size % 2 === 0 ? -50 : 50);
-    
+    if (this.players.has(playerId)) return;
+
+    const isTeam1 = team === 'team1';
+    const baseX = isTeam1 ? 150 : 650;
+    const offsetY = this.players.size % 2 === 0 ? -40 : 40;
+
     this.players.set(playerId, {
       id: playerId,
       name: playerName,
       team: team,
-      x: x,
-      y: y,
-      targetX: x,
-      targetY: y,
-      radius: 15,
+      x: baseX,
+      y: 300 + offsetY,
+      targetX: baseX,
+      targetY: 300 + offsetY,
+      radius: 18,
       hasBall: false,
-      score: 0,
-      speed: 3,
-      direction: team === 'team1' ? 1 : -1
+      speed: 4,
+      direction: isTeam1 ? 1 : -1,
     });
   }
 
+  // Удалить игрока
   removePlayer(playerId) {
-    const player = this.players.get(playerId);
-    if (player && player.hasBall) {
-      this.ball.vx = player.direction * 2;
-      this.ball.vy = 0;
-    }
     this.players.delete(playerId);
   }
 
+  // Старт игры (запускает таймер и физику)
   startGame() {
-    if (this.players.size < 2) return;
-    
+    if (this.isRunning) return;
+    if (this.players.size < 2) {
+      console.log('❌ Недостаточно игроков для старта');
+      return;
+    }
+
+    console.log(`✅ СТАРТ ИГРЫ ${this.gameId}`);
     this.isRunning = true;
     this.timer = 120;
-    this.resetPositions();
-    this.startTimer();
-    
-    const firstPlayer = Array.from(this.players.values())[0];
-    if (firstPlayer) {
-      this.giveBall(firstPlayer.id);
-    }
-  }
 
-  startTimer() {
-    if (this.timerInterval) {
-      clearInterval(this.timerInterval);
-    }
-    
+    // Размещаем игроков и даем мяч первому
+    this.resetPositions();
+
+    // Запускаем таймер
+    if (this.timerInterval) clearInterval(this.timerInterval);
     this.timerInterval = setInterval(() => {
       this.timer--;
       if (this.timer <= 0) {
         this.endGame();
       }
     }, 1000);
+
+    // Запускаем цикл обновления (физика) 30 раз в секунду
+    if (this.updateInterval) clearInterval(this.updateInterval);
+    this.updateInterval = setInterval(() => {
+      this.update();
+    }, 1000 / 30);
   }
 
+  // Завершить игру
   endGame() {
     this.isRunning = false;
-    if (this.timerInterval) {
-      clearInterval(this.timerInterval);
-    }
+    if (this.timerInterval) clearInterval(this.timerInterval);
+    if (this.updateInterval) clearInterval(this.updateInterval);
+    console.log(`🏁 Игра ${this.gameId} завершена`);
   }
 
+  // Сброс позиций
   resetPositions() {
     let team1Count = 0;
     let team2Count = 0;
-    
+
     for (const [id, player] of this.players) {
       if (player.team === 'team1') {
-        player.x = 150 + (team1Count % 2 === 0 ? -30 : 30);
-        player.y = 300 + (team1Count % 2 === 0 ? -50 : 50);
+        player.x = 150 + (team1Count % 2 === 0 ? -35 : 35);
+        player.y = 300 + (team1Count % 2 === 0 ? -40 : 40);
         team1Count++;
       } else {
-        player.x = 650 + (team2Count % 2 === 0 ? -30 : 30);
-        player.y = 300 + (team2Count % 2 === 0 ? -50 : 50);
+        player.x = 650 + (team2Count % 2 === 0 ? -35 : 35);
+        player.y = 300 + (team2Count % 2 === 0 ? -40 : 40);
         team2Count++;
       }
       player.hasBall = false;
     }
-    
+
     this.ball.x = 400;
     this.ball.y = 300;
     this.ball.vx = 0;
     this.ball.vy = 0;
+
+    // Даём мяч первому игроку
+    const firstPlayer = Array.from(this.players.values())[0];
+    if (firstPlayer) this.giveBall(firstPlayer.id);
   }
 
+  // Дать мяч игроку
   giveBall(playerId) {
+    for (const [id, p] of this.players) p.hasBall = false;
     const player = this.players.get(playerId);
-    if (!player) return;
-    
-    for (const [id, p] of this.players) {
-      p.hasBall = false;
+    if (player) {
+      player.hasBall = true;
+      this.ball.x = player.x + (player.team === 'team1' ? 25 : -25);
+      this.ball.y = player.y;
+      this.ball.vx = 0;
+      this.ball.vy = 0;
     }
-    
-    player.hasBall = true;
-    this.ball.x = player.x + (player.team === 'team1' ? 20 : -20);
-    this.ball.y = player.y;
   }
 
+  // Удар
   playerKick(playerId) {
     const player = this.players.get(playerId);
     if (!player || !player.hasBall || !this.isRunning) return;
-    
-    const power = 8;
-    const direction = player.direction;
-    
-    this.ball.vx = power * direction;
-    this.ball.vy = (Math.random() - 0.5) * 2;
+
+    const power = 9;
+    this.ball.vx = power * player.direction;
+    this.ball.vy = (Math.random() - 0.5) * 3;
     player.hasBall = false;
-    
+
     this.checkGoal();
   }
 
+  // Отбор
   playerTackle(playerId) {
     const player = this.players.get(playerId);
-    if (!player || player.hasBall || !this.isRunning) return;
-    
-    let tackled = false;
+    if (!player || !this.isRunning) return;
+
     for (const [id, target] of this.players) {
       if (id === playerId || !target.hasBall) continue;
-      
-      const distance = Math.hypot(player.x - target.x, player.y - target.y);
-      if (distance < 40) {
+      const dist = Math.hypot(player.x - target.x, player.y - target.y);
+      if (dist < 40) {
         target.hasBall = false;
         this.giveBall(playerId);
-        tackled = true;
         break;
       }
     }
-    
-    if (!tackled) {
-      if (Math.hypot(player.x - this.ball.x, player.y - this.ball.y) < 30) {
-        const angle = Math.atan2(this.ball.y - player.y, this.ball.x - player.x);
-        this.ball.vx = Math.cos(angle) * 5;
-        this.ball.vy = Math.sin(angle) * 5;
-      }
-    }
   }
 
+  // Обновить позицию игрока (из клиента)
   updatePlayerPosition(playerId, x, y) {
     const player = this.players.get(playerId);
     if (!player || !this.isRunning) return;
-    
-    x = Math.max(20, Math.min(this.field.width - 20, x));
-    y = Math.max(20, Math.min(this.field.height - 20, y));
-    
-    player.targetX = x;
-    player.targetY = y;
-    
-    if (x > player.x) {
-      player.direction = 1;
-    } else if (x < player.x) {
-      player.direction = -1;
-    }
+
+    // Ограничения поля
+    const margin = 25;
+    player.targetX = Math.max(margin, Math.min(this.field.width - margin, x));
+    player.targetY = Math.max(margin, Math.min(this.field.height - margin, y));
+
+    // Направление
+    if (x > player.x) player.direction = 1;
+    else if (x < player.x) player.direction = -1;
   }
 
+  // Проверка гола
   checkGoal() {
-    const goalMargin = 10;
-    const ballX = this.ball.x;
-    const ballY = this.ball.y;
-    
-    if (ballX < goalMargin + this.ball.radius &&
-        ballY > this.field.height/2 - this.field.goalHeight/2 &&
-        ballY < this.field.height/2 + this.field.goalHeight/2) {
+    const bx = this.ball.x;
+    const by = this.ball.y;
+    const goalY = this.field.height / 2;
+    const goalHalf = this.field.goalHeight / 2;
+
+    // Гол в левые ворота (team2 забивает)
+    if (bx < 15 && by > goalY - goalHalf && by < goalY + goalHalf) {
       this.score.team2++;
       this.resetPositions();
-      const player = Array.from(this.players.values()).find(p => p.team === 'team2');
-      if (player) this.giveBall(player.id);
+      const p = Array.from(this.players.values()).find((pl) => pl.team === 'team2');
+      if (p) this.giveBall(p.id);
       return;
     }
-    
-    if (ballX > this.field.width - goalMargin - this.ball.radius &&
-        ballY > this.field.height/2 - this.field.goalHeight/2 &&
-        ballY < this.field.height/2 + this.field.goalHeight/2) {
+
+    // Гол в правые ворота (team1 забивает)
+    if (bx > this.field.width - 15 && by > goalY - goalHalf && by < goalY + goalHalf) {
       this.score.team1++;
       this.resetPositions();
-      const player = Array.from(this.players.values()).find(p => p.team === 'team1');
-      if (player) this.giveBall(player.id);
+      const p = Array.from(this.players.values()).find((pl) => pl.team === 'team1');
+      if (p) this.giveBall(p.id);
       return;
     }
   }
 
+  // Обновление физики (вызывается по интервалу)
   update() {
     if (!this.isRunning) return;
-    
+
+    // --- Движение игроков к target ---
     for (const [id, player] of this.players) {
       const dx = player.targetX - player.x;
       const dy = player.targetY - player.y;
       const dist = Math.hypot(dx, dy);
-      
+
       if (dist > 2) {
         const speed = Math.min(player.speed, dist);
         player.x += (dx / dist) * speed;
         player.y += (dy / dist) * speed;
       }
     }
-    
-    this.ball.x += this.ball.vx;
-    this.ball.y += this.ball.vy;
-    
-    this.ball.vx *= 0.98;
-    this.ball.vy *= 0.98;
-    
+
+    // --- Физика мяча ---
+    // Если мяч у игрока - следует за ним
     let ballOwner = null;
-    for (const [id, player] of this.players) {
-      if (player.hasBall) {
-        ballOwner = player;
+    for (const [id, p] of this.players) {
+      if (p.hasBall) {
+        ballOwner = p;
         break;
       }
     }
-    
+
     if (ballOwner) {
-      const offsetX = ballOwner.team === 'team1' ? 20 : -20;
+      const offsetX = ballOwner.team === 'team1' ? 25 : -25;
       this.ball.x = ballOwner.x + offsetX;
       this.ball.y = ballOwner.y;
       this.ball.vx = 0;
       this.ball.vy = 0;
+    } else {
+      // Движение мяча
+      this.ball.x += this.ball.vx;
+      this.ball.y += this.ball.vy;
+
+      // Трение
+      this.ball.vx *= 0.99;
+      this.ball.vy *= 0.99;
+      if (Math.abs(this.ball.vx) < 0.05) this.ball.vx = 0;
+      if (Math.abs(this.ball.vy) < 0.05) this.ball.vy = 0;
+
+      // Отскоки от стен
+      const r = this.ball.radius;
+      const w = this.field.width;
+      const h = this.field.height;
+
+      if (this.ball.x < r || this.ball.x > w - r) {
+        this.ball.vx *= -0.6;
+        this.ball.x = Math.max(r, Math.min(w - r, this.ball.x));
+      }
+      if (this.ball.y < r || this.ball.y > h - r) {
+        this.ball.vy *= -0.6;
+        this.ball.y = Math.max(r, Math.min(h - r, this.ball.y));
+      }
+
+      // Проверка голов
+      this.checkGoal();
     }
-    
-    if (this.ball.x < this.ball.radius || this.ball.x > this.field.width - this.ball.radius) {
-      this.ball.vx *= -0.5;
-      this.ball.x = Math.max(this.ball.radius, Math.min(this.field.width - this.ball.radius, this.ball.x));
-    }
-    
-    if (this.ball.y < this.ball.radius || this.ball.y > this.field.height - this.ball.radius) {
-      this.ball.vy *= -0.5;
-      this.ball.y = Math.max(this.ball.radius, Math.min(this.field.height - this.ball.radius, this.ball.y));
-    }
-    
-    this.checkGoal();
   }
 
+  // Получить состояние игры для клиента
   getState() {
     const playersState = [];
     for (const [id, player] of this.players) {
       playersState.push({
-        id: id,
+        id: player.id,
         name: player.name,
         team: player.team,
         x: player.x,
         y: player.y,
         hasBall: player.hasBall,
-        score: player.score
+        radius: player.radius,
       });
     }
-    
+
     return {
       players: playersState,
-      ball: this.ball,
+      ball: {
+        x: this.ball.x,
+        y: this.ball.y,
+        radius: this.ball.radius,
+      },
       score: this.score,
       timer: this.timer,
-      isRunning: this.isRunning
+      isRunning: this.isRunning,
     };
   }
 }
