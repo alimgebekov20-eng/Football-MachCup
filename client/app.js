@@ -15,7 +15,7 @@ class FootballGame {
         this.isFullscreen = false;
         this._hasReceivedState = false;
         this._canMove = false;
-        this._lastMoveState = { x: 0, y: 0 }; // Запоминаем последнее движение
+        this._lastMoveState = { x: 0, y: 0 };
         
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
@@ -491,7 +491,6 @@ class FootballGame {
         this.resizeCanvas();
         this.gameOverModal.classList.remove('active');
         
-        // Обратный отсчёт 5 секунд
         let countdown = 5;
         this.timerElement.textContent = '⚡' + countdown;
         this.timerElement.style.color = '#ffd700';
@@ -528,7 +527,6 @@ class FootballGame {
                 this.kickBtn.style.opacity = '1';
                 this.tackleBtn.style.opacity = '1';
                 
-                // Сбрасываем движение
                 this.moveState = {
                     x: this.canvas.width / 2,
                     y: this.canvas.height / 2
@@ -581,7 +579,6 @@ class FootballGame {
         
         this.moveInterval = setInterval(() => {
             if (this.isRunning && this.ws && this.ws.readyState === WebSocket.OPEN && this._canMove) {
-                // Отправляем движение ТОЛЬКО если оно изменилось
                 const currentX = Math.round(this.moveState.x);
                 const currentY = Math.round(this.moveState.y);
                 const lastX = Math.round(this._lastMoveState.x);
@@ -659,16 +656,25 @@ class FootballGame {
         this.showScreen('menuScreen');
     }
     
-    // ===================== ИСПРАВЛЕННОЕ УПРАВЛЕНИЕ =====================
+    // ===================== ФИНАЛЬНАЯ ВЕРСИЯ =====================
     handleJoystickMove(direction) {
         const isMoving = Math.abs(direction.x) > 0.05 || Math.abs(direction.y) > 0.05;
         
         if (!isMoving) {
-            // ✅ ОТПРАВЛЯЕМ ЦЕНТР ПОЛЯ (остановка)
-            this.moveState = {
-                x: this.canvas.width / 2,
-                y: this.canvas.height / 2
-            };
+            // ✅ ОТПРАВЛЯЕМ ЦЕНТР, НО ТОЛЬКО 1 РАЗ
+            const centerX = this.canvas.width / 2;
+            const centerY = this.canvas.height / 2;
+            
+            if (this._lastMoveState.x !== centerX || this._lastMoveState.y !== centerY) {
+                this.moveState = {
+                    x: centerX,
+                    y: centerY
+                };
+                this._lastMoveState = {
+                    x: centerX,
+                    y: centerY
+                };
+            }
             return;
         }
         
@@ -690,7 +696,7 @@ class FootballGame {
             y: targetY
         };
     }
-    // ================================================================
+    // ===============================================================
     
     handleKick() {
         if (!this.isRunning || !this.ws || this.ws.readyState !== WebSocket.OPEN) return;
