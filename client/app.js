@@ -15,6 +15,7 @@ class FootballGame {
         this.isFullscreen = false;
         this._hasReceivedState = false;
         this._canMove = false;
+        this._lastMoveState = { x: 0, y: 0 }; // Запоминаем последнее движение
         
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
@@ -580,11 +581,23 @@ class FootballGame {
         
         this.moveInterval = setInterval(() => {
             if (this.isRunning && this.ws && this.ws.readyState === WebSocket.OPEN && this._canMove) {
-                this.ws.send(JSON.stringify({
-                    type: 'player_movement',
-                    x: this.moveState.x,
-                    y: this.moveState.y
-                }));
+                // Отправляем движение ТОЛЬКО если оно изменилось
+                const currentX = Math.round(this.moveState.x);
+                const currentY = Math.round(this.moveState.y);
+                const lastX = Math.round(this._lastMoveState.x);
+                const lastY = Math.round(this._lastMoveState.y);
+                
+                if (currentX !== lastX || currentY !== lastY) {
+                    this.ws.send(JSON.stringify({
+                        type: 'player_movement',
+                        x: this.moveState.x,
+                        y: this.moveState.y
+                    }));
+                    this._lastMoveState = {
+                        x: this.moveState.x,
+                        y: this.moveState.y
+                    };
+                }
             }
         }, 50);
     }
@@ -646,12 +659,16 @@ class FootballGame {
         this.showScreen('menuScreen');
     }
     
-    // ===================== ГЛАВНОЕ ИСПРАВЛЕНИЕ =====================
+    // ===================== ИСПРАВЛЕННОЕ УПРАВЛЕНИЕ =====================
     handleJoystickMove(direction) {
         const isMoving = Math.abs(direction.x) > 0.05 || Math.abs(direction.y) > 0.05;
         
         if (!isMoving) {
-            // НЕ ОТПРАВЛЯЕМ НИЧЕГО — ИГРОК ОСТАНЕТСЯ НА МЕСТЕ
+            // ✅ ОТПРАВЛЯЕМ ЦЕНТР ПОЛЯ (остановка)
+            this.moveState = {
+                x: this.canvas.width / 2,
+                y: this.canvas.height / 2
+            };
             return;
         }
         
