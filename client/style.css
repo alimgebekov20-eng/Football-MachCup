@@ -8,7 +8,7 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    background: radial-gradient(ellipse at center, #1a1a3e 0%, #0a0a1a 100%);
     color: white;
     overflow: hidden;
     height: 100vh;
@@ -25,6 +25,7 @@ body {
     top: 0;
     left: 0;
     animation: fadeIn 0.3s ease;
+    background: radial-gradient(ellipse at center, #1a1a3e 0%, #0a0a1a 100%);
 }
 
 .screen.active {
@@ -38,11 +39,16 @@ body {
     to { opacity: 1; transform: scale(1); }
 }
 
-/* ===== ЭКРАН ВХОДА ===== */
-#loginScreen {
+/* ===== ВСЕ ЭКРАНЫ ===== */
+#loginScreen,
+#menuScreen,
+#createLobbyScreen,
+#lobbyScreen,
+#findLobbyScreen {
     background: radial-gradient(ellipse at center, #1a1a3e 0%, #0a0a1a 100%);
 }
 
+/* ===== ЭКРАН ВХОДА ===== */
 .login-container {
     text-align: center;
     padding: 20px;
@@ -126,6 +132,7 @@ body {
 
 .btn-primary:active {
     transform: scale(0.95);
+    box-shadow: 0 5px 15px rgba(79,172,254,0.2);
 }
 
 .btn-primary:disabled {
@@ -160,6 +167,7 @@ body {
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s;
+    backdrop-filter: blur(10px);
 }
 
 .btn-secondary:active {
@@ -218,6 +226,7 @@ body {
     font-size: 1.3rem;
     font-weight: 700;
     display: block;
+    color: white;
 }
 
 .player-id {
@@ -311,6 +320,7 @@ body {
 .btn-mode .mode-title {
     font-size: 1.3rem;
     font-weight: 700;
+    color: white;
 }
 
 .btn-mode .mode-desc {
@@ -338,6 +348,7 @@ body {
 
 .lobby-header h2 {
     font-size: 1.5rem;
+    color: white;
 }
 
 .lobby-code-display {
@@ -398,6 +409,7 @@ body {
 
 .player-item .player-name-display {
     font-weight: 600;
+    color: white;
 }
 
 .player-item .player-team {
@@ -405,6 +417,7 @@ body {
     padding: 2px 10px;
     border-radius: 20px;
     background: rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.8);
 }
 
 .player-item .player-host-badge {
@@ -445,6 +458,7 @@ body {
     text-align: center;
     font-size: 1.8rem;
     margin-bottom: 20px;
+    color: white;
 }
 
 .lobbies-list {
@@ -464,6 +478,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    backdrop-filter: blur(10px);
 }
 
 .lobby-item:active {
@@ -494,6 +509,7 @@ body {
     color: white;
     font-weight: 600;
     cursor: pointer;
+    box-shadow: 0 5px 15px rgba(79,172,254,0.3);
 }
 
 .lobby-item .lobby-join-btn:active {
@@ -522,7 +538,7 @@ body {
     padding: 8px 15px;
     width: 100%;
     flex-shrink: 0;
-    background: rgba(0,0,0,0.3);
+    background: rgba(0,0,0,0.5);
     backdrop-filter: blur(10px);
     z-index: 10;
 }
@@ -551,7 +567,7 @@ body {
 
 .team-name {
     font-size: 0.7rem;
-    opacity: 0.7;
+    color: rgba(255,255,255,0.7);
     max-width: 60px;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -564,6 +580,7 @@ body {
     color: #4facfe;
     min-width: 30px;
     text-align: center;
+    text-shadow: 0 0 20px rgba(79,172,254,0.3);
 }
 
 .timer {
@@ -573,14 +590,16 @@ body {
     font-variant-numeric: tabular-nums;
     min-width: 50px;
     text-align: center;
+    text-shadow: 0 0 20px rgba(245,87,108,0.3);
 }
 
 #gameCanvas {
     flex: 1;
     width: 100%;
-    background: #1a8a3a;
+    background: radial-gradient(ellipse at center, #2d8a4e, #1a5a3a);
     display: block;
     touch-action: none;
+    box-shadow: inset 0 0 100px rgba(0,0,0,0.3);
 }
 
 .controls {
@@ -595,6 +614,7 @@ body {
     padding: 15px 20px;
     pointer-events: none;
     z-index: 20;
+    background: linear-gradient(to top, rgba(0,0,0,0.6), transparent);
 }
 
 .controls > * {
@@ -683,7 +703,7 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0,0,0,0.8);
+    background: rgba(0,0,0,0.85);
     backdrop-filter: blur(20px);
     display: none;
     justify-content: center;
@@ -697,18 +717,20 @@ body {
 }
 
 .modal-content {
-    background: linear-gradient(135deg, #1a1a3e, #0a0a1a);
+    background: radial-gradient(ellipse at center, #1a1a3e, #0a0a1a);
     padding: 30px;
     border-radius: 24px;
     text-align: center;
     max-width: 350px;
     width: 90%;
     border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.8);
 }
 
 .modal-content h2 {
     font-size: 1.8rem;
     margin-bottom: 20px;
+    color: white;
 }
 
 .final-score {
@@ -721,9 +743,17 @@ body {
     margin: 20px 0;
 }
 
+.final-score span:first-child {
+    color: #4facfe;
+}
+
+.final-score span:last-child {
+    color: #f5576c;
+}
+
 .final-score .vs {
     font-size: 1.2rem;
-    opacity: 0.3;
+    color: rgba(255,255,255,0.3);
 }
 
 #winnerMessage {
@@ -734,6 +764,21 @@ body {
 
 .hidden {
     display: none !important;
+}
+
+/* ===== SCROLLBAR ===== */
+.lobbies-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.lobbies-list::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.05);
+    border-radius: 10px;
+}
+
+.lobbies-list::-webkit-scrollbar-thumb {
+    background: rgba(79,172,254,0.3);
+    border-radius: 10px;
 }
 
 /* ===== АДАПТИВ ===== */
