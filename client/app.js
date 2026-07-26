@@ -13,11 +13,9 @@ class FootballGame {
         this.ball = {};
         this.score = { team1: 0, team2: 0 };
         
-        // Canvas
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
         
-        // Элементы UI
         this.loginScreen = document.getElementById('loginScreen');
         this.menuScreen = document.getElementById('menuScreen');
         this.createLobbyScreen = document.getElementById('createLobbyScreen');
@@ -65,7 +63,6 @@ class FootballGame {
         this.finalTeam2 = document.getElementById('finalTeam2');
         this.winnerMessage = document.getElementById('winnerMessage');
         
-        // Джостик
         this.joystick = new VirtualJoystick('joystickBase', 'joystickThumb');
         this.joystick.onMove((direction) => this.handleJoystickMove(direction));
         
@@ -78,31 +75,25 @@ class FootballGame {
     }
     
     setupEventListeners() {
-        // Вход
         this.enterBtn.addEventListener('click', () => this.handleLogin());
         this.playerNameInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.handleLogin();
         });
         
-        // Главное меню
         this.createLobbyBtn.addEventListener('click', () => this.showScreen('createLobbyScreen'));
         this.findLobbyBtn.addEventListener('click', () => this.handleFindLobbies());
         
-        // Создание лобби
         this.mode1v1Btn.addEventListener('click', () => this.handleCreateLobby('1v1'));
         this.mode2v2Btn.addEventListener('click', () => this.handleCreateLobby('2v2'));
         this.backFromCreateBtn.addEventListener('click', () => this.showScreen('menuScreen'));
         
-        // Лобби
         this.copyCodeBtn.addEventListener('click', () => this.handleCopyCode());
         this.startGameBtn.addEventListener('click', () => this.handleStartGame());
         this.leaveLobbyBtn.addEventListener('click', () => this.handleLeaveLobby());
         
-        // Поиск лобби
         this.refreshLobbiesBtn.addEventListener('click', () => this.handleFindLobbies());
         this.backFromFindBtn.addEventListener('click', () => this.showScreen('menuScreen'));
         
-        // Действия в игре
         this.kickBtn.addEventListener('click', () => this.handleKick());
         this.kickBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
@@ -117,14 +108,12 @@ class FootballGame {
         
         this.backToMenuBtn.addEventListener('click', () => this.handleBackToMenu());
         
-        // Ресайз
         window.addEventListener('resize', () => this.resizeCanvas());
         window.addEventListener('orientationchange', () => {
             setTimeout(() => this.resizeCanvas(), 300);
         });
     }
     
-    // ===== УПРАВЛЕНИЕ ЭКРАНАМИ =====
     showScreen(screenId) {
         const screens = ['loginScreen', 'menuScreen', 'createLobbyScreen', 'lobbyScreen', 'findLobbyScreen', 'gameScreen'];
         screens.forEach(id => {
@@ -137,7 +126,6 @@ class FootballGame {
         });
     }
     
-    // ===== ВХОД =====
     handleLogin() {
         const name = this.playerNameInput.value.trim();
         if (!name) {
@@ -154,7 +142,6 @@ class FootballGame {
         this.connectWebSocket();
     }
     
-    // ===== WEBSOCKET =====
     connectWebSocket() {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const host = window.location.host;
@@ -193,36 +180,36 @@ class FootballGame {
         };
     }
     
-    // ===== ОБРАБОТКА СООБЩЕНИЙ =====
+    // ⚠️ ВНИМАНИЕ: ЭТУ ФУНКЦИЮ МЕНЯЕМ (убираем this.handleFindLobbies())
     handleWebSocketMessage(data) {
-    switch (data.type) {
-        case 'auth_success':
-            this.playerId = data.playerId;
-            this.displayName.textContent = data.playerName;
-            this.displayId.textContent = `ID: ${data.playerId.slice(0, 8)}`;
-            this.showScreen('menuScreen');
-            break;
-            
-        case 'auth_error':
-            alert(data.message);
-            break;
-            
-        case 'lobby_created':
-            this.lobbyId = data.lobbyId;
-            this.isHost = true;
-            this.lobbyCode.textContent = data.lobbyCode;
-            this.updateLobbyUI(data);
-            this.showScreen('lobbyScreen');
-            // ✅ УБРАЛИ this.handleFindLobbies();
-            break;
-            
-        case 'lobby_joined':
-            this.lobbyId = data.lobbyId;
-            this.team = data.team;
-            this.isHost = false;
-            this.updateLobbyUI(data);
-            this.showScreen('lobbyScreen');
-            break;
+        switch (data.type) {
+            case 'auth_success':
+                this.playerId = data.playerId;
+                this.displayName.textContent = data.playerName;
+                this.displayId.textContent = `ID: ${data.playerId.slice(0, 8)}`;
+                this.showScreen('menuScreen');
+                break;
+                
+            case 'auth_error':
+                alert(data.message);
+                break;
+                
+            case 'lobby_created':
+                this.lobbyId = data.lobbyId;
+                this.isHost = true;
+                this.lobbyCode.textContent = data.lobbyCode;
+                this.updateLobbyUI(data);
+                this.showScreen('lobbyScreen');
+                // ✅ УБРАЛИ this.handleFindLobbies();
+                break;
+                
+            case 'lobby_joined':
+                this.lobbyId = data.lobbyId;
+                this.team = data.team;
+                this.isHost = false;
+                this.updateLobbyUI(data);
+                this.showScreen('lobbyScreen');
+                break;
                 
             case 'lobby_update':
                 this.updateLobbyUI(data);
@@ -267,11 +254,9 @@ class FootballGame {
     }
     
     getCurrentPlayers() {
-        // Получаем игроков из UI (костыль, но работает)
         return [];
     }
     
-    // ===== ЛОББИ =====
     handleCreateLobby(mode) {
         if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
             alert('Нет соединения с сервером');
@@ -340,7 +325,6 @@ class FootballGame {
     }
     
     updateLobbyUI(data) {
-        // Обновляем информацию о лобби
         if (data.players) {
             this.playersList.innerHTML = '';
             data.players.forEach(player => {
@@ -356,7 +340,6 @@ class FootballGame {
             
             this.lobbyPlayers.textContent = `Игроков: ${data.players.length}/${data.maxPlayers || 4}`;
             
-            // Проверяем, может ли хост начать игру
             if (this.isHost) {
                 const canStart = data.players && data.players.length >= 2;
                 this.startGameBtn.disabled = !canStart;
@@ -410,7 +393,6 @@ class FootballGame {
                 this.copyCodeBtn.textContent = '📋';
             }, 2000);
         }).catch(() => {
-            // Fallback
             const input = document.createElement('input');
             input.value = code;
             document.body.appendChild(input);
@@ -424,7 +406,6 @@ class FootballGame {
         });
     }
     
-    // ===== ИГРА =====
     startGame(data) {
         this.isRunning = true;
         this.timer = data.duration || 120;
@@ -500,7 +481,6 @@ class FootballGame {
         this.showScreen('menuScreen');
     }
     
-    // ===== УПРАВЛЕНИЕ =====
     handleJoystickMove(direction) {
         this.moveState = {
             x: direction.x * 200 + this.canvas.width / 2,
@@ -536,7 +516,6 @@ class FootballGame {
         }, 150);
     }
     
-    // ===== CANVAS =====
     resizeCanvas() {
         if (!this.canvas) return;
         const container = this.canvas.parentElement;
@@ -562,36 +541,29 @@ class FootballGame {
         
         if (!w || !h) return;
         
-        // Очистка
         ctx.clearRect(0, 0, w, h);
         
-        // Поле
         const gradient = ctx.createLinearGradient(0, 0, 0, h);
         gradient.addColorStop(0, '#2d8a4e');
         gradient.addColorStop(1, '#1a6a3a');
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, w, h);
         
-        // Разметка
         ctx.strokeStyle = 'rgba(255,255,255,0.3)';
         ctx.lineWidth = 2;
         
-        // Центральная линия
         ctx.beginPath();
         ctx.moveTo(w/2, 20);
         ctx.lineTo(w/2, h-20);
         ctx.stroke();
         
-        // Центральный круг
         ctx.beginPath();
         ctx.arc(w/2, h/2, 50, 0, Math.PI * 2);
         ctx.stroke();
         
-        // Ворота
         const goalWidth = 60;
         const goalHeight = 20;
         
-        // Левые ворота
         ctx.strokeStyle = 'rgba(255,255,255,0.5)';
         ctx.lineWidth = 3;
         ctx.beginPath();
@@ -601,7 +573,6 @@ class FootballGame {
         ctx.lineTo(0, h/2 + goalHeight/2);
         ctx.stroke();
         
-        // Правые ворота
         ctx.beginPath();
         ctx.moveTo(w, h/2 - goalHeight/2);
         ctx.lineTo(w - goalWidth, h/2 - goalHeight/2);
@@ -609,13 +580,11 @@ class FootballGame {
         ctx.lineTo(w, h/2 + goalHeight/2);
         ctx.stroke();
         
-        // Штрафные площади
         ctx.strokeStyle = 'rgba(255,255,255,0.2)';
         ctx.lineWidth = 2;
         ctx.strokeRect(0, h/2 - 80, 80, 160);
         ctx.strokeRect(w - 80, h/2 - 80, 80, 160);
         
-        // Мяч
         if (this.ball) {
             const bx = (this.ball.x / 800) * w;
             const by = (this.ball.y / 600) * h;
@@ -629,7 +598,6 @@ class FootballGame {
             ctx.fill();
             ctx.shadowBlur = 0;
             
-            // Рисунок на мяче
             ctx.strokeStyle = 'rgba(0,0,0,0.2)';
             ctx.lineWidth = 1;
             ctx.beginPath();
@@ -642,18 +610,15 @@ class FootballGame {
             ctx.stroke();
         }
         
-        // Игроки
         if (this.players) {
             Object.values(this.players).forEach(player => {
                 const px = (player.x / 800) * w;
                 const py = (player.y / 600) * h;
                 const pr = (player.radius / 800) * w;
                 
-                // Тень
                 ctx.shadowColor = 'rgba(0,0,0,0.3)';
                 ctx.shadowBlur = 10;
                 
-                // Тело
                 const color = player.team === 'team1' ? '#4facfe' : '#f5576c';
                 const gradient2 = ctx.createRadialGradient(px - pr/3, py - pr/3, 0, px, py, pr);
                 gradient2.addColorStop(0, color);
@@ -663,20 +628,17 @@ class FootballGame {
                 ctx.fillStyle = gradient2;
                 ctx.fill();
                 
-                // Обводка
                 ctx.shadowBlur = 0;
                 ctx.strokeStyle = 'rgba(255,255,255,0.3)';
                 ctx.lineWidth = 2;
                 ctx.stroke();
                 
-                // Имя
                 ctx.fillStyle = 'white';
                 ctx.font = `${Math.max(10, pr * 0.8)}px Arial`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'bottom';
                 ctx.fillText(player.name, px, py - pr - 5);
                 
-                // Мяч у игрока
                 if (player.hasBall) {
                     ctx.shadowColor = 'rgba(255,215,0,0.5)';
                     ctx.shadowBlur = 20;
@@ -691,8 +653,7 @@ class FootballGame {
     }
 }
 
-// Запуск игры
 document.addEventListener('DOMContentLoaded', () => {
     const game = new FootballGame();
-    window.game = game; // Для отладки
+    window.game = game;
 });
