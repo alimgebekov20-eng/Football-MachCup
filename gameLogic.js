@@ -5,7 +5,7 @@ class GameLogic {
     this.timer = 120;
     this.timerInterval = null;
     this.updateInterval = null;
-    this.broadcastInterval = null; // 👈 ДЛЯ АВТО-РАССЫЛКИ
+    this.broadcastInterval = null;
 
     this.players = new Map();
 
@@ -46,7 +46,7 @@ class GameLogic {
       y: 300 + offsetY,
       targetX: baseX,
       targetY: 300 + offsetY,
-      radius: 18,
+      radius: 14, // Уменьшен с 18 до 14
       hasBall: false,
       speed: 4,
       direction: isTeam1 ? 1 : -1,
@@ -123,6 +123,9 @@ class GameLogic {
         team2Count++;
       }
       player.hasBall = false;
+      // Сбрасываем target на текущую позицию
+      player.targetX = player.x;
+      player.targetY = player.y;
     }
 
     this.ball.x = 400;
