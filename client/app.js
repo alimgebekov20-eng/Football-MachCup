@@ -488,14 +488,15 @@ class FootballGame {
         this.resizeCanvas();
         this.gameOverModal.classList.remove('active');
         
-        this.moveState = {
-            x: this.canvas.width / 2,
-            y: this.canvas.height / 2
-        };
+        // ✅ НЕ ОТПРАВЛЯЕМ ДВИЖЕНИЕ ПРИ СТАРТЕ — ЖДЁМ ПОЗИЦИИ ОТ СЕРВЕРА
+        // this.moveState = {
+        //     x: this.canvas.width / 2,
+        //     y: this.canvas.height / 2
+        // };
+        this.moveState = { x: null, y: null };
         
         this.startMovementLoop();
         
-        // Если через 2 секунды нет данных — рисуем тестовых игроков
         setTimeout(() => {
             if (!this._hasReceivedState) {
                 console.log('⚠️ Данные не пришли, создаём тестовых игроков');
