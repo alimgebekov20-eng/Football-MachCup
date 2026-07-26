@@ -646,14 +646,12 @@ class FootballGame {
         this.showScreen('menuScreen');
     }
     
+    // ===================== ГЛАВНОЕ ИСПРАВЛЕНИЕ =====================
     handleJoystickMove(direction) {
         const isMoving = Math.abs(direction.x) > 0.05 || Math.abs(direction.y) > 0.05;
         
         if (!isMoving) {
-            this.moveState = {
-                x: this.canvas.width / 2,
-                y: this.canvas.height / 2
-            };
+            // НЕ ОТПРАВЛЯЕМ НИЧЕГО — ИГРОК ОСТАНЕТСЯ НА МЕСТЕ
             return;
         }
         
@@ -675,6 +673,7 @@ class FootballGame {
             y: targetY
         };
     }
+    // ================================================================
     
     handleKick() {
         if (!this.isRunning || !this.ws || this.ws.readyState !== WebSocket.OPEN) return;
