@@ -13,6 +13,7 @@ class FootballGame {
         this.ball = {};
         this.score = { team1: 0, team2: 0 };
         this.isFullscreen = false;
+        this._hasReceivedState = false; // Флаг, что данные пришли
         
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
@@ -251,6 +252,8 @@ class FootballGame {
     }
     
     handleWebSocketMessage(data) {
+        console.log('📨 Получено:', data.type);
+        
         switch (data.type) {
             case 'auth_success':
                 this.playerId = data.playerId;
@@ -302,12 +305,15 @@ class FootballGame {
                 break;
                 
             case 'game_started':
+                console.log('🎮 СТАРТ ИГРЫ!', data);
                 this.gameId = data.gameId;
                 this.team = data.team;
                 this.startGame(data);
                 break;
                 
             case 'game_state':
+                console.log('📊 СОСТОЯНИЕ ИГРЫ:', data.state);
+                this._hasReceivedState = true;
                 this.updateGameState(data.state);
                 break;
                 
@@ -473,6 +479,7 @@ class FootballGame {
         this.isRunning = true;
         this.timer = data.duration || 120;
         this.team = data.team;
+        this._hasReceivedState = false;
         
         this.team1Name.textContent = this.team === 'team1' ? '👤 Вы' : '👤 Соперник';
         this.team2Name.textContent = this.team === 'team2' ? '👤 Вы' : '👤 Соперник';
@@ -481,13 +488,45 @@ class FootballGame {
         this.resizeCanvas();
         this.gameOverModal.classList.remove('active');
         
-        // ✅ СБРАСЫВАЕМ ПОЗИЦИЮ ПРИ СТАРТЕ (чтобы игрок не шёл сам)
         this.moveState = {
             x: this.canvas.width / 2,
             y: this.canvas.height / 2
         };
         
         this.startMovementLoop();
+        
+        // Если через 2 секунды нет данных — рисуем тестовых игроков
+        setTimeout(() => {
+            if (!this._hasReceivedState) {
+                console.log('⚠️ Данные не пришли, создаём тестовых игроков');
+                this.players = {
+                    'test1': {
+                        id: 'test1',
+                        name: this.playerName || 'Вы',
+                        team: 'team1',
+                        x: 200,
+                        y: 300,
+                        hasBall: true,
+                        radius: 14
+                    },
+                    'test2': {
+                        id: 'test2',
+                        name: 'Соперник',
+                        team: 'team2',
+                        x: 600,
+                        y: 300,
+                        hasBall: false,
+                        radius: 14
+                    }
+                };
+                this.ball = {
+                    x: 400,
+                    y: 300,
+                    radius: 10
+                };
+                this.score = { team1: 0, team2: 0 };
+            }
+        }, 2000);
     }
     
     startMovementLoop() {
@@ -509,8 +548,20 @@ class FootballGame {
     updateGameState(state) {
         if (!state) return;
         
-        this.players = state.players || {};
-        this.ball = state.ball || {};
+        this._hasReceivedState = true;
+        
+        // Проверяем, что данные есть
+        if (state.players && state.players.length > 0) {
+            this.players = {};
+            state.players.forEach(player => {
+                this.players[player.id] = player;
+            });
+            console.log(`✅ Загружено ${Object.keys(this.players).length} игроков`);
+        } else {
+            console.warn('⚠️ В состоянии нет игроков!');
+        }
+        
+        this.ball = state.ball || { x: 400, y: 300, radius: 10 };
         this.score = state.score || { team1: 0, team2: 0 };
         this.timer = state.timer || 0;
         this.isRunning = state.isRunning || false;
@@ -542,6 +593,7 @@ class FootballGame {
     
     handleBackToMenu() {
         this.isRunning = false;
+        this._hasReceivedState = false;
         if (this.moveInterval) {
             clearInterval(this.moveInterval);
             this.moveInterval = null;
@@ -550,12 +602,10 @@ class FootballGame {
         this.showScreen('menuScreen');
     }
     
-    // ===== УПРАВЛЕНИЕ (ИСПРАВЛЕНО) =====
     handleJoystickMove(direction) {
         const isMoving = Math.abs(direction.x) > 0.05 || Math.abs(direction.y) > 0.05;
         
         if (!isMoving) {
-            // Если джостик в центре - отправляем центр поля (стоять на месте)
             this.moveState = {
                 x: this.canvas.width / 2,
                 y: this.canvas.height / 2
@@ -563,19 +613,16 @@ class FootballGame {
             return;
         }
         
-        // Вычисляем позицию на поле
         const fieldWidth = this.canvas.width;
         const fieldHeight = this.canvas.height;
         const margin = 35;
         
-        // Максимальное смещение от центра (30% от размера поля)
         const maxOffsetX = fieldWidth * 0.25;
         const maxOffsetY = fieldHeight * 0.25;
         
         let targetX = fieldWidth / 2 + direction.x * maxOffsetX;
         let targetY = fieldHeight / 2 + direction.y * maxOffsetY;
         
-        // Ограничиваем полем
         targetX = Math.max(margin, Math.min(fieldWidth - margin, targetX));
         targetY = Math.max(margin, Math.min(fieldHeight - margin, targetY));
         
@@ -625,7 +672,6 @@ class FootballGame {
         this.fieldWidth = this.canvas.width;
         this.fieldHeight = this.canvas.height;
         
-        // Адаптация джостика под ориентацию
         const joystickContainer = document.getElementById('joystickContainer');
         if (window.innerHeight < window.innerWidth) {
             joystickContainer.style.width = '150px';
@@ -658,7 +704,7 @@ class FootballGame {
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, w, h);
         
-        // Полосы на поле (как на реальном футбольном поле)
+        // Полосы
         ctx.strokeStyle = 'rgba(255,255,255,0.08)';
         ctx.lineWidth = 1;
         for (let i = 0; i < h; i += 40) {
@@ -672,24 +718,21 @@ class FootballGame {
         ctx.strokeStyle = 'rgba(255,255,255,0.4)';
         ctx.lineWidth = 2;
         
-        // Центральная линия
         ctx.beginPath();
         ctx.moveTo(w/2, 20);
         ctx.lineTo(w/2, h-20);
         ctx.stroke();
         
-        // Центральный круг
         ctx.beginPath();
         ctx.arc(w/2, h/2, Math.min(w, h) * 0.08, 0, Math.PI * 2);
         ctx.stroke();
         
-        // Центральная точка
         ctx.beginPath();
         ctx.arc(w/2, h/2, 4, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(255,255,255,0.4)';
         ctx.fill();
         
-        // --- ВОРОТА (видные) ---
+        // --- ВОРОТА ---
         const goalWidth = 50;
         const goalHeight = h * 0.2;
         const goalY = h/2 - goalHeight/2;
@@ -698,8 +741,6 @@ class FootballGame {
         // Левые ворота
         ctx.strokeStyle = 'rgba(255,255,255,0.7)';
         ctx.lineWidth = 3;
-        
-        // Штанги и перекладина (левые)
         ctx.beginPath();
         ctx.moveTo(0, goalY);
         ctx.lineTo(goalDepth, goalY);
@@ -707,7 +748,6 @@ class FootballGame {
         ctx.lineTo(0, goalY + goalHeight);
         ctx.stroke();
         
-        // Сетка ворот (левая)
         ctx.strokeStyle = 'rgba(255,255,255,0.15)';
         ctx.lineWidth = 1;
         const gridSize = 8;
@@ -734,7 +774,6 @@ class FootballGame {
         ctx.lineTo(w, goalY + goalHeight);
         ctx.stroke();
         
-        // Сетка ворот (правая)
         ctx.strokeStyle = 'rgba(255,255,255,0.15)';
         ctx.lineWidth = 1;
         for (let y = goalY + 5; y < goalY + goalHeight - 5; y += gridSize) {
@@ -750,28 +789,16 @@ class FootballGame {
             ctx.stroke();
         }
         
-        // --- ШТРАФНЫЕ ПЛОЩАДИ ---
+        // --- ШТРАФНЫЕ ---
         ctx.strokeStyle = 'rgba(255,255,255,0.25)';
         ctx.lineWidth = 2;
         const penaltyWidth = 80;
         const penaltyHeight = goalHeight + 40;
         const penaltyY = h/2 - penaltyHeight/2;
-        
-        // Левая штрафная
         ctx.strokeRect(0, penaltyY, penaltyWidth, penaltyHeight);
-        // Правая штрафная
         ctx.strokeRect(w - penaltyWidth, penaltyY, penaltyWidth, penaltyHeight);
         
-        // --- ВРАТАРСКАЯ ЗОНА ---
-        ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-        ctx.lineWidth = 1.5;
-        const gkWidth = 30;
-        const gkHeight = goalHeight + 20;
-        const gkY = h/2 - gkHeight/2;
-        ctx.strokeRect(0, gkY, gkWidth, gkHeight);
-        ctx.strokeRect(w - gkWidth, gkY, gkWidth, gkHeight);
-        
-        // --- МЯЧ (уменьшен) ---
+        // --- МЯЧ ---
         if (this.ball) {
             const bx = (this.ball.x / 800) * w;
             const by = (this.ball.y / 600) * h;
@@ -779,14 +806,11 @@ class FootballGame {
             
             ctx.shadowColor = 'rgba(255,255,255,0.3)';
             ctx.shadowBlur = 10;
-            
-            // Тень мяча
             ctx.beginPath();
             ctx.arc(bx + 2, by + 2, br, 0, Math.PI * 2);
             ctx.fillStyle = 'rgba(0,0,0,0.2)';
             ctx.fill();
             
-            // Мяч
             ctx.shadowColor = 'rgba(255,255,255,0.2)';
             ctx.shadowBlur = 8;
             ctx.beginPath();
@@ -799,7 +823,6 @@ class FootballGame {
             ctx.fill();
             ctx.shadowBlur = 0;
             
-            // Рисунок на мяче
             ctx.strokeStyle = 'rgba(100,100,100,0.3)';
             ctx.lineWidth = 0.5;
             ctx.beginPath();
@@ -815,14 +838,16 @@ class FootballGame {
             ctx.stroke();
         }
         
-        // --- ИГРОКИ (уменьшены, чтобы поле казалось больше) ---
-        if (this.players) {
-            Object.values(this.players).forEach(player => {
+        // --- ИГРОКИ ---
+        const playersList = Object.values(this.players);
+        if (playersList.length > 0) {
+            playersList.forEach(player => {
+                if (!player.x || !player.y) return;
+                
                 const px = (player.x / 800) * w;
                 const py = (player.y / 600) * h;
-                const pr = Math.max(12, (player.radius / 800) * w * 0.9);
+                const pr = Math.max(12, (player.radius || 14) / 800 * w * 0.9);
                 
-                // Тень игрока
                 ctx.shadowColor = 'rgba(0,0,0,0.2)';
                 ctx.shadowBlur = 8;
                 ctx.beginPath();
@@ -830,7 +855,6 @@ class FootballGame {
                 ctx.fillStyle = 'rgba(0,0,0,0.15)';
                 ctx.fill();
                 
-                // Тело игрока
                 ctx.shadowColor = 'rgba(0,0,0,0.2)';
                 ctx.shadowBlur = 6;
                 const color = player.team === 'team1' ? '#4facfe' : '#f5576c';
@@ -843,27 +867,23 @@ class FootballGame {
                 ctx.fillStyle = grad;
                 ctx.fill();
                 
-                // Обводка
                 ctx.shadowBlur = 0;
                 ctx.strokeStyle = 'rgba(255,255,255,0.2)';
                 ctx.lineWidth = 1.5;
                 ctx.stroke();
                 
-                // Имя (мелкий шрифт)
                 ctx.fillStyle = 'rgba(255,255,255,0.8)';
                 ctx.font = `${Math.max(9, pr * 0.6)}px Arial`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'bottom';
-                const nameDisplay = player.name.length > 8 ? player.name.slice(0, 7) + '…' : player.name;
+                const nameDisplay = (player.name || 'Игрок').length > 8 ? (player.name || 'Игрок').slice(0, 7) + '…' : (player.name || 'Игрок');
                 ctx.fillText(nameDisplay, px, py - pr - 3);
                 
-                // Номер (в центре)
                 ctx.fillStyle = 'rgba(255,255,255,0.9)';
                 ctx.font = `${Math.max(10, pr * 0.6)}px Arial`;
                 ctx.textBaseline = 'middle';
                 ctx.fillText('7', px, py + 1);
                 
-                // Мяч у игрока (золотой ободок)
                 if (player.hasBall) {
                     ctx.shadowColor = 'rgba(255,215,0,0.4)';
                     ctx.shadowBlur = 15;
@@ -875,6 +895,13 @@ class FootballGame {
                     ctx.shadowBlur = 0;
                 }
             });
+        } else {
+            // Если игроков нет — рисуем сообщение
+            ctx.fillStyle = 'rgba(255,255,255,0.3)';
+            ctx.font = '20px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('⏳ Ожидание игроков...', w/2, h/2);
         }
     }
 }
