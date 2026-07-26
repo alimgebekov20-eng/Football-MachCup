@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>⚽ Football Battle</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- ЭКРАН ВХОДА -->
+    <div id="loginScreen" class="screen active">
+        <div class="login-container">
+            <div class="logo">
+                <span class="ball-icon">⚽</span>
+                <h1>Football Battle</h1>
+                <p class="subtitle">1x1 • 2x2 • Онлайн</p>
+            </div>
+            
+            <div class="input-group">
+                <input type="text" id="playerName" placeholder="Введите ваше имя" maxlength="15" autocomplete="off">
+                <button id="enterGameBtn" class="btn-primary">Войти в игру</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ГЛАВНОЕ МЕНЮ -->
+    <div id="menuScreen" class="screen">
+        <div class="menu-container">
+            <div class="player-info">
+                <span class="player-name" id="displayName">Игрок</span>
+                <span class="player-id" id="displayId">ID: ---</span>
+            </div>
+            
+            <div class="menu-buttons">
+                <button id="createLobbyBtn" class="btn-menu btn-lobby">
+                    <span class="icon">🏠</span>
+                    Создать лобби
+                </button>
+                <button id="findLobbyBtn" class="btn-menu btn-find">
+                    <span class="icon">🔍</span>
+                    Найти лобби
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ЭКРАН СОЗДАНИЯ ЛОББИ (выбор режима) -->
+    <div id="createLobbyScreen" class="screen">
+        <div class="create-lobby-container">
+            <h2>Выберите режим</h2>
+            <div class="mode-buttons">
+                <button id="mode1v1Btn" class="btn-mode">
+                    <span class="mode-icon">⚔️</span>
+                    <span class="mode-title">1 на 1</span>
+                    <span class="mode-desc">Дуэль один на один</span>
+                </button>
+                <button id="mode2v2Btn" class="btn-mode">
+                    <span class="mode-icon">👥</span>
+                    <span class="mode-title">2 на 2</span>
+                    <span class="mode-desc">Командная игра</span>
+                </button>
+            </div>
+            <button id="backFromCreateBtn" class="btn-back">← Назад</button>
+        </div>
+    </div>
+
+    <!-- ЭКРАН ЛОББИ (ожидание) -->
+    <div id="lobbyScreen" class="screen">
+        <div class="lobby-container">
+            <div class="lobby-header">
+                <h2>🏠 Лобби</h2>
+                <div class="lobby-code-display">
+                    <span class="code-label">Код:</span>
+                    <span class="code-value" id="lobbyCode">----</span>
+                    <button id="copyCodeBtn" class="btn-small">📋</button>
+                </div>
+            </div>
+            
+            <div class="lobby-info">
+                <span id="lobbyMode">Режим: 1v1</span>
+                <span id="lobbyPlayers">Игроков: 0/2</span>
+            </div>
+            
+            <div class="players-list" id="playersList">
+                <!-- Игроки будут добавляться динамически -->
+            </div>
+            
+            <div class="lobby-actions">
+                <button id="startGameBtn" class="btn-primary btn-start" disabled>
+                    🚀 Старт
+                </button>
+                <button id="leaveLobbyBtn" class="btn-danger">Выйти</button>
+            </div>
+            
+            <div id="lobbyStatus" class="lobby-status">
+                Ожидание игроков...
+            </div>
+        </div>
+    </div>
+
+    <!-- ЭКРАН ПОИСКА ЛОББИ -->
+    <div id="findLobbyScreen" class="screen">
+        <div class="find-lobby-container">
+            <h2>🔍 Доступные лобби</h2>
+            <div id="lobbiesList" class="lobbies-list">
+                <div class="loading-text">Поиск лобби...</div>
+            </div>
+            <button id="refreshLobbiesBtn" class="btn-secondary">🔄 Обновить</button>
+            <button id="backFromFindBtn" class="btn-back">← Назад</button>
+        </div>
+    </div>
+
+    <!-- ИГРОВОЙ ЭКРАН -->
+    <div id="gameScreen" class="screen">
+        <div class="game-header">
+            <div class="score-board">
+                <div class="team team-left">
+                    <span class="team-name" id="team1Name">Команда 1</span>
+                    <span class="team-score" id="team1Score">0</span>
+                </div>
+                <div class="timer" id="gameTimer">120</div>
+                <div class="team team-right">
+                    <span class="team-score" id="team2Score">0</span>
+                    <span class="team-name" id="team2Name">Команда 2</span>
+                </div>
+            </div>
+        </div>
+        
+        <canvas id="gameCanvas"></canvas>
+        
+        <div class="controls">
+            <div id="joystickContainer">
+                <div id="joystickBase">
+                    <div id="joystickThumb"></div>
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <button id="kickBtn" class="action-btn kick-btn">
+                    <span>⚽</span>
+                    Удар
+                </button>
+                <button id="tackleBtn" class="action-btn tackle-btn">
+                    <span>🛡️</span>
+                    Отбор
+                </button>
+            </div>
+        </div>
+        
+        <div id="gameOverModal" class="modal hidden">
+            <div class="modal-content">
+                <h2>⏰ Время вышло!</h2>
+                <div class="final-score">
+                    <span id="finalTeam1">0</span>
+                    <span class="vs">vs</span>
+                    <span id="finalTeam2">0</span>
+                </div>
+                <p id="winnerMessage">Ничья!</p>
+                <button id="backToMenuBtn" class="btn-primary">В меню</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="joystick.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
