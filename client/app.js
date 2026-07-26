@@ -481,6 +481,12 @@ class FootballGame {
         this.resizeCanvas();
         this.gameOverModal.classList.remove('active');
         
+        // ✅ СБРАСЫВАЕМ ПОЗИЦИЮ ПРИ СТАРТЕ (чтобы игрок не шёл сам)
+        this.moveState = {
+            x: this.canvas.width / 2,
+            y: this.canvas.height / 2
+        };
+        
         this.startMovementLoop();
     }
     
@@ -549,6 +555,7 @@ class FootballGame {
         const isMoving = Math.abs(direction.x) > 0.05 || Math.abs(direction.y) > 0.05;
         
         if (!isMoving) {
+            // Если джостик в центре - отправляем центр поля (стоять на месте)
             this.moveState = {
                 x: this.canvas.width / 2,
                 y: this.canvas.height / 2
@@ -556,14 +563,19 @@ class FootballGame {
             return;
         }
         
+        // Вычисляем позицию на поле
         const fieldWidth = this.canvas.width;
         const fieldHeight = this.canvas.height;
-        const margin = 30;
-        const maxOffset = Math.min(fieldWidth, fieldHeight) * 0.3;
+        const margin = 35;
         
-        let targetX = fieldWidth / 2 + direction.x * maxOffset;
-        let targetY = fieldHeight / 2 + direction.y * maxOffset;
+        // Максимальное смещение от центра (30% от размера поля)
+        const maxOffsetX = fieldWidth * 0.25;
+        const maxOffsetY = fieldHeight * 0.25;
         
+        let targetX = fieldWidth / 2 + direction.x * maxOffsetX;
+        let targetY = fieldHeight / 2 + direction.y * maxOffsetY;
+        
+        // Ограничиваем полем
         targetX = Math.max(margin, Math.min(fieldWidth - margin, targetX));
         targetY = Math.max(margin, Math.min(fieldHeight - margin, targetY));
         
@@ -638,63 +650,158 @@ class FootballGame {
         
         ctx.clearRect(0, 0, w, h);
         
+        // --- ПОЛЕ ---
         const gradient = ctx.createLinearGradient(0, 0, 0, h);
         gradient.addColorStop(0, '#2d8a4e');
+        gradient.addColorStop(0.5, '#3ca55c');
         gradient.addColorStop(1, '#1a6a3a');
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, w, h);
         
-        ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+        // Полосы на поле (как на реальном футбольном поле)
+        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < h; i += 40) {
+            ctx.beginPath();
+            ctx.moveTo(0, i);
+            ctx.lineTo(w, i);
+            ctx.stroke();
+        }
+        
+        // --- РАЗМЕТКА ---
+        ctx.strokeStyle = 'rgba(255,255,255,0.4)';
         ctx.lineWidth = 2;
         
+        // Центральная линия
         ctx.beginPath();
         ctx.moveTo(w/2, 20);
         ctx.lineTo(w/2, h-20);
         ctx.stroke();
         
+        // Центральный круг
         ctx.beginPath();
-        ctx.arc(w/2, h/2, 50, 0, Math.PI * 2);
+        ctx.arc(w/2, h/2, Math.min(w, h) * 0.08, 0, Math.PI * 2);
         ctx.stroke();
         
-        const goalWidth = 60;
-        const goalHeight = 20;
+        // Центральная точка
+        ctx.beginPath();
+        ctx.arc(w/2, h/2, 4, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.fill();
         
-        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+        // --- ВОРОТА (видные) ---
+        const goalWidth = 50;
+        const goalHeight = h * 0.2;
+        const goalY = h/2 - goalHeight/2;
+        const goalDepth = 15;
+        
+        // Левые ворота
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+        ctx.lineWidth = 3;
+        
+        // Штанги и перекладина (левые)
+        ctx.beginPath();
+        ctx.moveTo(0, goalY);
+        ctx.lineTo(goalDepth, goalY);
+        ctx.lineTo(goalDepth, goalY + goalHeight);
+        ctx.lineTo(0, goalY + goalHeight);
+        ctx.stroke();
+        
+        // Сетка ворот (левая)
+        ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+        ctx.lineWidth = 1;
+        const gridSize = 8;
+        for (let y = goalY + 5; y < goalY + goalHeight - 5; y += gridSize) {
+            ctx.beginPath();
+            ctx.moveTo(1, y);
+            ctx.lineTo(goalDepth - 1, y);
+            ctx.stroke();
+        }
+        for (let x = 2; x < goalDepth - 2; x += gridSize) {
+            ctx.beginPath();
+            ctx.moveTo(x, goalY + 5);
+            ctx.lineTo(x, goalY + goalHeight - 5);
+            ctx.stroke();
+        }
+        
+        // Правые ворота
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
         ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.moveTo(0, h/2 - goalHeight/2);
-        ctx.lineTo(goalWidth, h/2 - goalHeight/2);
-        ctx.lineTo(goalWidth, h/2 + goalHeight/2);
-        ctx.lineTo(0, h/2 + goalHeight/2);
+        ctx.moveTo(w, goalY);
+        ctx.lineTo(w - goalDepth, goalY);
+        ctx.lineTo(w - goalDepth, goalY + goalHeight);
+        ctx.lineTo(w, goalY + goalHeight);
         ctx.stroke();
         
-        ctx.beginPath();
-        ctx.moveTo(w, h/2 - goalHeight/2);
-        ctx.lineTo(w - goalWidth, h/2 - goalHeight/2);
-        ctx.lineTo(w - goalWidth, h/2 + goalHeight/2);
-        ctx.lineTo(w, h/2 + goalHeight/2);
-        ctx.stroke();
+        // Сетка ворот (правая)
+        ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+        ctx.lineWidth = 1;
+        for (let y = goalY + 5; y < goalY + goalHeight - 5; y += gridSize) {
+            ctx.beginPath();
+            ctx.moveTo(w - 1, y);
+            ctx.lineTo(w - goalDepth + 1, y);
+            ctx.stroke();
+        }
+        for (let x = w - 2; x > w - goalDepth + 2; x -= gridSize) {
+            ctx.beginPath();
+            ctx.moveTo(x, goalY + 5);
+            ctx.lineTo(x, goalY + goalHeight - 5);
+            ctx.stroke();
+        }
         
-        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+        // --- ШТРАФНЫЕ ПЛОЩАДИ ---
+        ctx.strokeStyle = 'rgba(255,255,255,0.25)';
         ctx.lineWidth = 2;
-        ctx.strokeRect(0, h/2 - 80, 80, 160);
-        ctx.strokeRect(w - 80, h/2 - 80, 80, 160);
+        const penaltyWidth = 80;
+        const penaltyHeight = goalHeight + 40;
+        const penaltyY = h/2 - penaltyHeight/2;
         
+        // Левая штрафная
+        ctx.strokeRect(0, penaltyY, penaltyWidth, penaltyHeight);
+        // Правая штрафная
+        ctx.strokeRect(w - penaltyWidth, penaltyY, penaltyWidth, penaltyHeight);
+        
+        // --- ВРАТАРСКАЯ ЗОНА ---
+        ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+        ctx.lineWidth = 1.5;
+        const gkWidth = 30;
+        const gkHeight = goalHeight + 20;
+        const gkY = h/2 - gkHeight/2;
+        ctx.strokeRect(0, gkY, gkWidth, gkHeight);
+        ctx.strokeRect(w - gkWidth, gkY, gkWidth, gkHeight);
+        
+        // --- МЯЧ (уменьшен) ---
         if (this.ball) {
             const bx = (this.ball.x / 800) * w;
             const by = (this.ball.y / 600) * h;
-            const br = (this.ball.radius / 800) * w;
+            const br = Math.max(6, (this.ball.radius / 800) * w * 1.2);
             
-            ctx.shadowColor = 'rgba(255,255,255,0.5)';
-            ctx.shadowBlur = 15;
+            ctx.shadowColor = 'rgba(255,255,255,0.3)';
+            ctx.shadowBlur = 10;
+            
+            // Тень мяча
+            ctx.beginPath();
+            ctx.arc(bx + 2, by + 2, br, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.fill();
+            
+            // Мяч
+            ctx.shadowColor = 'rgba(255,255,255,0.2)';
+            ctx.shadowBlur = 8;
             ctx.beginPath();
             ctx.arc(bx, by, br, 0, Math.PI * 2);
-            ctx.fillStyle = 'white';
+            const ballGrad = ctx.createRadialGradient(bx - br*0.3, by - br*0.3, 0, bx, by, br);
+            ballGrad.addColorStop(0, '#ffffff');
+            ballGrad.addColorStop(0.7, '#f0f0f0');
+            ballGrad.addColorStop(1, '#cccccc');
+            ctx.fillStyle = ballGrad;
             ctx.fill();
             ctx.shadowBlur = 0;
             
-            ctx.strokeStyle = 'rgba(0,0,0,0.2)';
-            ctx.lineWidth = 1;
+            // Рисунок на мяче
+            ctx.strokeStyle = 'rgba(100,100,100,0.3)';
+            ctx.lineWidth = 0.5;
             ctx.beginPath();
             ctx.moveTo(bx - br, by);
             ctx.lineTo(bx + br, by);
@@ -703,44 +810,68 @@ class FootballGame {
             ctx.moveTo(bx, by - br);
             ctx.lineTo(bx, by + br);
             ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(bx, by, br * 0.5, 0, Math.PI * 2);
+            ctx.stroke();
         }
         
+        // --- ИГРОКИ (уменьшены, чтобы поле казалось больше) ---
         if (this.players) {
             Object.values(this.players).forEach(player => {
                 const px = (player.x / 800) * w;
                 const py = (player.y / 600) * h;
-                const pr = (player.radius / 800) * w;
+                const pr = Math.max(12, (player.radius / 800) * w * 0.9);
                 
-                ctx.shadowColor = 'rgba(0,0,0,0.3)';
-                ctx.shadowBlur = 10;
-                
-                const color = player.team === 'team1' ? '#4facfe' : '#f5576c';
-                const gradient2 = ctx.createRadialGradient(px - pr/3, py - pr/3, 0, px, py, pr);
-                gradient2.addColorStop(0, color);
-                gradient2.addColorStop(1, player.team === 'team1' ? '#2d7dd2' : '#c0392b');
+                // Тень игрока
+                ctx.shadowColor = 'rgba(0,0,0,0.2)';
+                ctx.shadowBlur = 8;
                 ctx.beginPath();
-                ctx.arc(px, py, pr, 0, Math.PI * 2);
-                ctx.fillStyle = gradient2;
+                ctx.arc(px + 2, py + 3, pr, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(0,0,0,0.15)';
                 ctx.fill();
                 
+                // Тело игрока
+                ctx.shadowColor = 'rgba(0,0,0,0.2)';
+                ctx.shadowBlur = 6;
+                const color = player.team === 'team1' ? '#4facfe' : '#f5576c';
+                const grad = ctx.createRadialGradient(px - pr*0.3, py - pr*0.3, 0, px, py, pr);
+                grad.addColorStop(0, color);
+                grad.addColorStop(0.6, color);
+                grad.addColorStop(1, player.team === 'team1' ? '#2d7dd2' : '#c0392b');
+                ctx.beginPath();
+                ctx.arc(px, py, pr, 0, Math.PI * 2);
+                ctx.fillStyle = grad;
+                ctx.fill();
+                
+                // Обводка
                 ctx.shadowBlur = 0;
-                ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-                ctx.lineWidth = 2;
+                ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                ctx.lineWidth = 1.5;
                 ctx.stroke();
                 
-                ctx.fillStyle = 'white';
-                ctx.font = `${Math.max(10, pr * 0.8)}px Arial`;
+                // Имя (мелкий шрифт)
+                ctx.fillStyle = 'rgba(255,255,255,0.8)';
+                ctx.font = `${Math.max(9, pr * 0.6)}px Arial`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'bottom';
-                ctx.fillText(player.name, px, py - pr - 5);
+                const nameDisplay = player.name.length > 8 ? player.name.slice(0, 7) + '…' : player.name;
+                ctx.fillText(nameDisplay, px, py - pr - 3);
                 
+                // Номер (в центре)
+                ctx.fillStyle = 'rgba(255,255,255,0.9)';
+                ctx.font = `${Math.max(10, pr * 0.6)}px Arial`;
+                ctx.textBaseline = 'middle';
+                ctx.fillText('7', px, py + 1);
+                
+                // Мяч у игрока (золотой ободок)
                 if (player.hasBall) {
-                    ctx.shadowColor = 'rgba(255,215,0,0.5)';
-                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = 'rgba(255,215,0,0.4)';
+                    ctx.shadowBlur = 15;
+                    ctx.strokeStyle = 'rgba(255,215,0,0.6)';
+                    ctx.lineWidth = 2;
                     ctx.beginPath();
-                    ctx.arc(px + (player.team === 'team1' ? pr * 0.8 : -pr * 0.8), py, pr * 0.3, 0, Math.PI * 2);
-                    ctx.fillStyle = '#ffd700';
-                    ctx.fill();
+                    ctx.arc(px, py, pr + 3, 0, Math.PI * 2);
+                    ctx.stroke();
                     ctx.shadowBlur = 0;
                 }
             });
