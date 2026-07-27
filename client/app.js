@@ -102,11 +102,27 @@ class FootballGame {
             'down-right': { x: 1, y: 1 }
         };
         
+        // ========== ГЛАВНОЕ ИСПРАВЛЕНИЕ ==========
         const setDirection = (dir) => {
             if (!dir) {
-                // ✅ ОСТАНОВКА: центр (400, 300)
-                this._moveX = 400;
-                this._moveY = 300;
+                // ✅ ОСТАНОВКА: отправляем ТЕКУЩУЮ ПОЗИЦИЮ игрока
+                let myPlayer = null;
+                for (const id in this.players) {
+                    if (this.players[id].id === this.playerId) {
+                        myPlayer = this.players[id];
+                        break;
+                    }
+                }
+                
+                if (myPlayer) {
+                    const px = (myPlayer.x / 800) * this.canvas.width;
+                    const py = (myPlayer.y / 600) * this.canvas.height;
+                    this._moveX = px;
+                    this._moveY = py;
+                } else {
+                    this._moveX = this.canvas.width / 2;
+                    this._moveY = this.canvas.height / 2;
+                }
                 return;
             }
             
@@ -120,6 +136,7 @@ class FootballGame {
             this._moveX = targetX;
             this._moveY = targetY;
         };
+        // =========================================
         
         const highlightBtn = (btn) => {
             buttons.forEach(b => b.classList.remove('active'));
@@ -470,8 +487,9 @@ class FootballGame {
         this.resizeCanvas();
         this.gameOverModal.classList.remove('active');
         
-        this._moveX = 400;
-        this._moveY = 300;
+        // Сбрасываем движение в центр при старте
+        this._moveX = this.canvas.width / 2;
+        this._moveY = this.canvas.height / 2;
         
         let countdown = 5;
         this.timerElement.textContent = '⚡' + countdown;
@@ -577,8 +595,8 @@ class FootballGame {
     handleBackToMenu() {
         this.isRunning = false;
         this._hasReceivedState = false;
-        this._moveX = 400;
-        this._moveY = 300;
+        this._moveX = this.canvas.width / 2;
+        this._moveY = this.canvas.height / 2;
         this.gameOverModal.classList.remove('active');
         this.showScreen('menuScreen');
     }
