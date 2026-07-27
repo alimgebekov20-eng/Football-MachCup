@@ -15,9 +15,7 @@ class FootballGame {
         this.isFullscreen = false;
         this._hasReceivedState = false;
         this._canMove = false;
-        
-        // НОВАЯ ПЕРЕМЕННАЯ ДЛЯ ТЕКУЩЕГО НАПРАВЛЕНИЯ
-        this._currentDirection = { x: 0, y: 0 };
+        this.currentDirection = { x: 0, y: 0 };
         
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
@@ -69,15 +67,12 @@ class FootballGame {
         this.finalTeam2 = document.getElementById('finalTeam2');
         this.winnerMessage = document.getElementById('winnerMessage');
         
-        // ПОДКЛЮЧАЕМ ДЖОСТИК
-        this.joystick = new VirtualJoystick('joystickBase', 'joystickThumb');
-        this.joystick.onMove((direction) => this.handleJoystickMove(direction));
-        
         this.moveState = { x: 0, y: 0 };
         this.moveInterval = null;
         
         this.setupEventListeners();
         this.setupFullscreen();
+        this.setupDpad();
         this.resizeCanvas();
         this.gameLoop();
     }
@@ -94,7 +89,7 @@ class FootballGame {
         });
         this.canvas.addEventListener('touchend', (e) => {
             const target = e.target;
-            if (target.id === 'joystickBase' || target.id === 'joystickThumb' || 
+            if (target.id === 'dpad' || target.closest('.dpad') || 
                 target.classList.contains('action-btn')) {
                 return;
             }
@@ -486,6 +481,7 @@ class FootballGame {
         this.team = data.team;
         this._hasReceivedState = false;
         this._canMove = false;
+        this.currentDirection = { x: 0, y: 0 };
         
         this.team1Name.textContent = this.team === 'team1' ? '👤 Вы' : '👤 Соперник';
         this.team2Name.textContent = this.team === 'team2' ? '👤 Вы' : '👤 Соперник';
@@ -494,7 +490,6 @@ class FootballGame {
         this.resizeCanvas();
         this.gameOverModal.classList.remove('active');
         
-        // Обратный отсчёт
         let countdown = 5;
         this.timerElement.textContent = '⚡' + countdown;
         this.timerElement.style.color = '#ffd700';
@@ -505,11 +500,9 @@ class FootballGame {
         this.kickBtn.style.opacity = '0.5';
         this.tackleBtn.style.opacity = '0.5';
         
-        // СБРАСЫВАЕМ НАПРАВЛЕНИЕ
-        this._currentDirection = { x: 0, y: 0 };
         this.moveState = {
-            x: this.canvas.width / 2,
-            y: this.canvas.height / 2
+            x: 400,
+            y: 300
         };
         
         const countdownInterval = setInterval(() => {
@@ -580,8 +573,8 @@ class FootballGame {
         
         this.moveInterval = setInterval(() => {
             if (this.isRunning && this.ws && this.ws.readyState === WebSocket.OPEN && this._canMove) {
-                // Отправляем только если есть движение
-                if (this.moveState.x !== 0 && this.moveState.y !== 0) {
+                // Отправляем только если есть движение (не центр)
+                if (this.moveState.x !== 400 || this.moveState.y !== 300) {
                     this.ws.send(JSON.stringify({
                         type: 'player_movement',
                         x: this.moveState.x,
@@ -641,7 +634,7 @@ class FootballGame {
         this.isRunning = false;
         this._hasReceivedState = false;
         this._canMove = false;
-        this._currentDirection = { x: 0, y: 0 };
+        this.currentDirection = { x: 0, y: 0 };
         if (this.moveInterval) {
             clearInterval(this.moveInterval);
             this.moveInterval = null;
@@ -650,75 +643,90 @@ class FootballGame {
         this.showScreen('menuScreen');
     }
     
-    // ===================== НОВОЕ ДВИЖЕНИЕ С НУЛЯ =====================
-    handleJoystickMove(direction) {
-        const isMoving = Math.abs(direction.x) > 0.15 || Math.abs(direction.y) > 0.15;
+    // ===================== D-PAD УПРАВЛЕНИЕ =====================
+    setupDpad() {
+        const buttons = document.querySelectorAll('.dpad-btn');
+        const dpad = document.getElementById('dpad');
         
-        if (!isMoving) {
-            // ✅ ФИКСИРОВАННЫЙ ЦЕНТР ПОЛЯ (НЕ ЗАВИСИТ ОТ РАЗМЕРА ЭКРАНА!)
-            if (this._lastMoveState.x !== 400 || this._lastMoveState.y !== 300) {
-                this.moveState = {
-                    x: 400,
-                    y: 300
-                };
-                this._lastMoveState = {
-                    x: 400,
-                    y: 300
-                };
+        const directions = {
+            'up-left': { x: -1, y: -1 },
+            'up': { x: 0, y: -1 },
+            'up-right': { x: 1, y: -1 },
+            'left': { x: -1, y: 0 },
+            'center': { x: 0, y: 0 },
+            'right': { x: 1, y: 0 },
+            'down-left': { x: -1, y: 1 },
+            'down': { x: 0, y: 1 },
+            'down-right': { x: 1, y: 1 }
+        };
+        
+        const handleStart = (e, btn) => {
+            e.preventDefault();
+            const dir = btn.dataset.dir;
+            const dirData = directions[dir];
+            
+            buttons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            this.currentDirection = { x: dirData.x, y: dirData.y };
+            this.sendDirection();
+        };
+        
+        const handleEnd = (e) => {
+            e.preventDefault();
+            buttons.forEach(b => b.classList.remove('active'));
+            this.currentDirection = { x: 0, y: 0 };
+            this.sendDirection();
+        };
+        
+        // Touch события для каждой кнопки
+        buttons.forEach(btn => {
+            btn.addEventListener('touchstart', (e) => handleStart(e, btn), { passive: false });
+            btn.addEventListener('touchend', handleEnd, { passive: false });
+            btn.addEventListener('touchcancel', handleEnd, { passive: false });
+            
+            btn.addEventListener('mousedown', (e) => handleStart(e, btn));
+            btn.addEventListener('mouseup', handleEnd);
+            btn.addEventListener('mouseleave', handleEnd);
+        });
+        
+        // 👇 ГЛАВНОЕ: проводим пальцем по кнопкам
+        dpad.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const element = document.elementFromPoint(touch.clientX, touch.clientY);
+            
+            if (element && element.classList.contains('dpad-btn')) {
+                buttons.forEach(b => b.classList.remove('active'));
+                element.classList.add('active');
+                
+                const dir = element.dataset.dir;
+                const dirData = directions[dir];
+                this.currentDirection = { x: dirData.x, y: dirData.y };
+                this.sendDirection();
             }
-            return;
-        }
-        
-        // ✅ ФИКСИРОВАННОЕ ПОЛЕ 800x600
+        }, { passive: false });
+    }
+    
+    sendDirection() {
+        const dir = this.currentDirection;
         const fieldWidth = 800;
         const fieldHeight = 600;
         const margin = 35;
         const offset = 200;
         
-        // Определяем направление
-        let dirX = 0;
-        let dirY = 0;
-        
-        if (direction.x > 0.15) dirX = 1;
-        else if (direction.x < -0.15) dirX = -1;
-        
-        if (direction.y > 0.15) dirY = 1;
-        else if (direction.y < -0.15) dirY = -1;
-        
-        // Если оба нуля — стоим
-        if (dirX === 0 && dirY === 0) {
-            if (this._lastMoveState.x !== 400 || this._lastMoveState.y !== 300) {
-                this.moveState = {
-                    x: 400,
-                    y: 300
-                };
-                this._lastMoveState = {
-                    x: 400,
-                    y: 300
-                };
-            }
-            return;
-        }
-        
-        let targetX = 400 + dirX * offset;
-        let targetY = 300 + dirY * offset;
+        let targetX = 400 + dir.x * offset;
+        let targetY = 300 + dir.y * offset;
         
         targetX = Math.round(Math.max(margin, Math.min(fieldWidth - margin, targetX)));
         targetY = Math.round(Math.max(margin, Math.min(fieldHeight - margin, targetY)));
         
-        // Отправляем только если изменилось
-        if (this._lastMoveState.x !== targetX || this._lastMoveState.y !== targetY) {
-            this.moveState = {
-                x: targetX,
-                y: targetY
-            };
-            this._lastMoveState = {
-                x: targetX,
-                y: targetY
-            };
-        }
+        this.moveState = {
+            x: targetX,
+            y: targetY
+        };
     }
-    // ====================================================================
+    // =============================================================
     
     handleKick() {
         if (!this.isRunning || !this.ws || this.ws.readyState !== WebSocket.OPEN) return;
@@ -752,22 +760,13 @@ class FootballGame {
         if (!this.canvas) return;
         
         const headerHeight = document.querySelector('.game-header')?.offsetHeight || 50;
-        const controlsHeight = window.innerHeight < window.innerWidth ? 80 : 200;
+        const controlsHeight = 220;
         
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight - headerHeight - controlsHeight;
         
         this.fieldWidth = this.canvas.width;
         this.fieldHeight = this.canvas.height;
-        
-        const joystickContainer = document.getElementById('joystickContainer');
-        if (window.innerHeight < window.innerWidth) {
-            joystickContainer.style.width = '150px';
-            joystickContainer.style.height = '150px';
-        } else {
-            joystickContainer.style.width = '130px';
-            joystickContainer.style.height = '130px';
-        }
     }
     
     gameLoop() {
