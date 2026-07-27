@@ -16,16 +16,9 @@ class FootballGame {
         this._hasReceivedState = false;
         this._canMove = false;
         
-        // ------------------- НОВАЯ СИСТЕМА ДВИЖЕНИЯ -------------------
-        this._currentDir = { x: 0, y: 0 };        // текущее направление (что сейчас нажато)
-        this._lastSentDir = { x: 0, y: 0 };       // последнее отправленное направление
-        this._targetPos = { x: 400, y: 300 };     // целевая позиция для отправки
-        // --------------------------------------------------------------
-        
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
-        
-        // ... все остальные DOM-ссылки (оставляем как было) ...
+        // ... все DOM элементы как были ...
         this.loginScreen = document.getElementById('loginScreen');
         this.menuScreen = document.getElementById('menuScreen');
         this.createLobbyScreen = document.getElementById('createLobbyScreen');
@@ -40,7 +33,6 @@ class FootballGame {
         
         this.createLobbyBtn = document.getElementById('createLobbyBtn');
         this.findLobbyBtn = document.getElementById('findLobbyBtn');
-        
         this.mode1v1Btn = document.getElementById('mode1v1Btn');
         this.mode2v2Btn = document.getElementById('mode2v2Btn');
         this.backFromCreateBtn = document.getElementById('backFromCreateBtn');
@@ -73,7 +65,9 @@ class FootballGame {
         this.finalTeam2 = document.getElementById('finalTeam2');
         this.winnerMessage = document.getElementById('winnerMessage');
         
+        this.moveState = { x: 0, y: 0 };
         this.moveInterval = null;
+        this._lastSent = { x: 0, y: 0 };
         
         this.setupEventListeners();
         this.setupFullscreen();
@@ -82,7 +76,7 @@ class FootballGame {
         this.gameLoop();
     }
     
-    // ===================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====================
+    // ===================== ВСПОМОГАТЕЛЬНЫЕ =====================
     
     showScreen(screenId) {
         const screens = ['loginScreen', 'menuScreen', 'createLobbyScreen', 'lobbyScreen', 'findLobbyScreen', 'gameScreen'];
@@ -360,11 +354,6 @@ class FootballGame {
         this._hasReceivedState = false;
         this._canMove = false;
         
-        // СБРАСЫВАЕМ ВСЁ ДВИЖЕНИЕ
-        this._currentDir = { x: 0, y: 0 };
-        this._lastSentDir = { x: 0, y: 0 };
-        this._targetPos = { x: 400, y: 300 };
-        
         this.team1Name.textContent = this.team === 'team1' ? '👤 Вы' : '👤 Соперник';
         this.team2Name.textContent = this.team === 'team2' ? '👤 Вы' : '👤 Соперник';
         
@@ -372,7 +361,6 @@ class FootballGame {
         this.resizeCanvas();
         this.gameOverModal.classList.remove('active');
         
-        // Обратный отсчёт
         let countdown = 5;
         this.timerElement.textContent = '⚡' + countdown;
         this.timerElement.style.color = '#ffd700';
@@ -382,6 +370,13 @@ class FootballGame {
         this.tackleBtn.disabled = true;
         this.kickBtn.style.opacity = '0.5';
         this.tackleBtn.style.opacity = '0.5';
+        
+        // СБРАСЫВАЕМ ДВИЖЕНИЕ ПРИ СТАРТЕ
+        this.moveState = {
+            x: this.canvas.width / 2,
+            y: this.canvas.height / 2
+        };
+        this._lastSent = { x: 0, y: 0 };
         
         const countdownInterval = setInterval(() => {
             countdown--;
@@ -447,30 +442,20 @@ class FootballGame {
             clearInterval(this.moveInterval);
         }
         this.moveInterval = setInterval(() => {
-            if (!this.isRunning || !this.ws || this.ws.readyState !== WebSocket.OPEN || !this._canMove) {
-                return;
-            }
-            
-            // Отправляем ТОЛЬКО если направление изменилось
-            if (this._currentDir.x !== this._lastSentDir.x || this._currentDir.y !== this._lastSentDir.y) {
-                // Вычисляем целевую позицию
-                const offset = 200;
-                const margin = 35;
-                let targetX = 400 + this._currentDir.x * offset;
-                let targetY = 300 + this._currentDir.y * offset;
-                targetX = Math.round(Math.max(margin, Math.min(800 - margin, targetX)));
-                targetY = Math.round(Math.max(margin, Math.min(600 - margin, targetY)));
-                
-                this._targetPos = { x: targetX, y: targetY };
-                this._lastSentDir = { ...this._currentDir };
-                
-                // Отправляем
-                this.ws.send(JSON.stringify({
-                    type: 'player_movement',
-                    x: targetX,
-                    y: targetY
-                }));
-                console.log(`📤 ДВИЖЕНИЕ: (${targetX}, ${targetY})`);
+            if (this.isRunning && this.ws && this.ws.readyState === WebSocket.OPEN && this._canMove) {
+                // Отправляем ТОЛЬКО если координаты изменились
+                if (this.moveState.x !== this._lastSent.x || this.moveState.y !== this._lastSent.y) {
+                    this.ws.send(JSON.stringify({
+                        type: 'player_movement',
+                        x: this.moveState.x,
+                        y: this.moveState.y
+                    }));
+                    this._lastSent = {
+                        x: this.moveState.x,
+                        y: this.moveState.y
+                    };
+                    console.log(`📤 ОТПРАВКА: (${this.moveState.x}, ${this.moveState.y})`);
+                }
             }
         }, 50);
     }
@@ -514,8 +499,6 @@ class FootballGame {
         this.isRunning = false;
         this._hasReceivedState = false;
         this._canMove = false;
-        this._currentDir = { x: 0, y: 0 };
-        this._lastSentDir = { x: 0, y: 0 };
         if (this.moveInterval) {
             clearInterval(this.moveInterval);
             this.moveInterval = null;
@@ -524,7 +507,7 @@ class FootballGame {
         this.showScreen('menuScreen');
     }
     
-    // ===================== D-PAD УПРАВЛЕНИЕ (ПРОСТОЕ И ПОНЯТНОЕ) =====================
+    // ===================== D-PAD УПРАВЛЕНИЕ =====================
     
     setupDpad() {
         const buttons = document.querySelectorAll('.dpad-btn');
@@ -542,34 +525,67 @@ class FootballGame {
             'down-right': { x: 1, y: 1 }
         };
         
-        const setDirection = (dir) => {
-            this._currentDir = { x: dir.x, y: dir.y };
-            console.log(`🕹️ НАПРАВЛЕНИЕ: (${dir.x}, ${dir.y})`);
-        };
-        
-        const stopMoving = () => {
-            this._currentDir = { x: 0, y: 0 };
-            console.log('🛑 ОСТАНОВКА');
-        };
-        
         const highlightBtn = (btn) => {
             buttons.forEach(b => b.classList.remove('active'));
             if (btn) btn.classList.add('active');
         };
         
+        // 👇 НАЧАЛО ДВИЖЕНИЯ
         const handleStart = (e, btn) => {
             e.preventDefault();
             const dir = directions[btn.dataset.dir];
-            if (dir) {
-                highlightBtn(btn);
-                setDirection(dir);
-            }
+            if (!dir) return;
+            
+            highlightBtn(btn);
+            
+            // Вычисляем координаты
+            const fieldWidth = 800;
+            const fieldHeight = 600;
+            const margin = 35;
+            const offset = 200;
+            
+            let targetX = 400 + dir.x * offset;
+            let targetY = 300 + dir.y * offset;
+            targetX = Math.round(Math.max(margin, Math.min(fieldWidth - margin, targetX)));
+            targetY = Math.round(Math.max(margin, Math.min(fieldHeight - margin, targetY)));
+            
+            this.moveState = {
+                x: (targetX / 800) * this.canvas.width,
+                y: (targetY / 600) * this.canvas.height
+            };
+            console.log(`🏃 ДВИЖЕНИЕ: (${this.moveState.x}, ${this.moveState.y})`);
         };
         
+        // 👇 ОСТАНОВКА (ОТПРАВЛЯЕМ ТЕКУЩУЮ ПОЗИЦИЮ)
         const handleEnd = (e) => {
             e.preventDefault();
             highlightBtn(null);
-            stopMoving();
+            
+            // Находим текущую позицию игрока
+            let myPlayer = null;
+            for (const id in this.players) {
+                if (this.players[id].id === this.playerId) {
+                    myPlayer = this.players[id];
+                    break;
+                }
+            }
+            
+            if (myPlayer) {
+                // Отправляем его текущую позицию → он останется на месте
+                const px = (myPlayer.x / 800) * this.canvas.width;
+                const py = (myPlayer.y / 600) * this.canvas.height;
+                this.moveState = {
+                    x: px,
+                    y: py
+                };
+                console.log(`🛑 ОСТАНОВКА: (${px}, ${py})`);
+            } else {
+                // Если игрока нет — отправляем центр
+                this.moveState = {
+                    x: this.canvas.width / 2,
+                    y: this.canvas.height / 2
+                };
+            }
         };
         
         // События на кнопках
@@ -598,14 +614,45 @@ class FootballGame {
                     const dir = directions[element.dataset.dir];
                     if (dir) {
                         highlightBtn(element);
-                        setDirection(dir);
+                        const fieldWidth = 800;
+                        const fieldHeight = 600;
+                        const margin = 35;
+                        const offset = 200;
+                        let targetX = 400 + dir.x * offset;
+                        let targetY = 300 + dir.y * offset;
+                        targetX = Math.round(Math.max(margin, Math.min(fieldWidth - margin, targetX)));
+                        targetY = Math.round(Math.max(margin, Math.min(fieldHeight - margin, targetY)));
+                        this.moveState = {
+                            x: (targetX / 800) * this.canvas.width,
+                            y: (targetY / 600) * this.canvas.height
+                        };
                     }
                 }
             } else {
                 if (currentHighlight !== null) {
                     currentHighlight = null;
                     highlightBtn(null);
-                    stopMoving();
+                    // Останавливаемся
+                    let myPlayer = null;
+                    for (const id in this.players) {
+                        if (this.players[id].id === this.playerId) {
+                            myPlayer = this.players[id];
+                            break;
+                        }
+                    }
+                    if (myPlayer) {
+                        const px = (myPlayer.x / 800) * this.canvas.width;
+                        const py = (myPlayer.y / 600) * this.canvas.height;
+                        this.moveState = {
+                            x: px,
+                            y: py
+                        };
+                    } else {
+                        this.moveState = {
+                            x: this.canvas.width / 2,
+                            y: this.canvas.height / 2
+                        };
+                    }
                 }
             }
         }, { passive: false });
@@ -616,7 +663,26 @@ class FootballGame {
             if (!target.closest('.dpad')) {
                 currentHighlight = null;
                 highlightBtn(null);
-                stopMoving();
+                let myPlayer = null;
+                for (const id in this.players) {
+                    if (this.players[id].id === this.playerId) {
+                        myPlayer = this.players[id];
+                        break;
+                    }
+                }
+                if (myPlayer) {
+                    const px = (myPlayer.x / 800) * this.canvas.width;
+                    const py = (myPlayer.y / 600) * this.canvas.height;
+                    this.moveState = {
+                        x: px,
+                        y: py
+                    };
+                } else {
+                    this.moveState = {
+                        x: this.canvas.width / 2,
+                        y: this.canvas.height / 2
+                    };
+                }
             }
         });
     }
@@ -670,7 +736,6 @@ class FootballGame {
         
         ctx.clearRect(0, 0, w, h);
         
-        // Поле
         const gradient = ctx.createLinearGradient(0, 0, 0, h);
         gradient.addColorStop(0, '#2d8a4e');
         gradient.addColorStop(0.5, '#3ca55c');
@@ -678,7 +743,6 @@ class FootballGame {
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, w, h);
         
-        // Полосы
         ctx.strokeStyle = 'rgba(255,255,255,0.08)';
         ctx.lineWidth = 1;
         for (let i = 0; i < h; i += 40) {
@@ -688,7 +752,6 @@ class FootballGame {
             ctx.stroke();
         }
         
-        // Разметка
         ctx.strokeStyle = 'rgba(255,255,255,0.4)';
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -703,7 +766,6 @@ class FootballGame {
         ctx.fillStyle = 'rgba(255,255,255,0.4)';
         ctx.fill();
         
-        // Ворота
         const goalWidth = 50;
         const goalHeight = h * 0.2;
         const goalY = h/2 - goalHeight/2;
@@ -766,7 +828,6 @@ class FootballGame {
         ctx.strokeRect(0, penaltyY, penaltyWidth, penaltyHeight);
         ctx.strokeRect(w - penaltyWidth, penaltyY, penaltyWidth, penaltyHeight);
         
-        // Мяч
         if (this.ball && this.ball.x !== undefined) {
             const bx = (this.ball.x / 800) * w;
             const by = (this.ball.y / 600) * h;
@@ -803,7 +864,6 @@ class FootballGame {
             ctx.stroke();
         }
         
-        // Игроки
         const playersList = Object.values(this.players);
         if (playersList.length > 0) {
             playersList.forEach(player => {
