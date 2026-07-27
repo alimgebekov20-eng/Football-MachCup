@@ -44,7 +44,7 @@
         </div>
     </div>
 
-    <!-- ЭКРАН СОЗДАНИЯ ЛОББИ (выбор режима) -->
+    <!-- ЭКРАН СОЗДАНИЯ ЛОББИ -->
     <div id="createLobbyScreen" class="screen">
         <div class="create-lobby-container">
             <h2>Выберите режим</h2>
@@ -64,7 +64,7 @@
         </div>
     </div>
 
-    <!-- ЭКРАН ЛОББИ (ожидание) -->
+    <!-- ЭКРАН ЛОББИ -->
     <div id="lobbyScreen" class="screen">
         <div class="lobby-container">
             <div class="lobby-header">
@@ -81,20 +81,14 @@
                 <span id="lobbyPlayers">Игроков: 0/2</span>
             </div>
             
-            <div class="players-list" id="playersList">
-                <!-- Игроки будут добавляться динамически -->
-            </div>
+            <div class="players-list" id="playersList"></div>
             
             <div class="lobby-actions">
-                <button id="startGameBtn" class="btn-primary btn-start" disabled>
-                    🚀 Старт
-                </button>
+                <button id="startGameBtn" class="btn-primary btn-start" disabled>🚀 Старт</button>
                 <button id="leaveLobbyBtn" class="btn-danger">Выйти</button>
             </div>
             
-            <div id="lobbyStatus" class="lobby-status">
-                Ожидание игроков...
-            </div>
+            <div id="lobbyStatus" class="lobby-status">Ожидание игроков...</div>
         </div>
     </div>
 
@@ -128,11 +122,18 @@
         
         <canvas id="gameCanvas"></canvas>
         
+        <!-- НОВОЕ УПРАВЛЕНИЕ: D-PAD 8 НАПРАВЛЕНИЙ -->
         <div class="controls">
-            <div id="joystickContainer">
-                <div id="joystickBase">
-                    <div id="joystickThumb"></div>
-                </div>
+            <div class="dpad" id="dpad">
+                <button class="dpad-btn" data-dir="up-left">↖</button>
+                <button class="dpad-btn" data-dir="up">↑</button>
+                <button class="dpad-btn" data-dir="up-right">↗</button>
+                <button class="dpad-btn" data-dir="left">←</button>
+                <button class="dpad-btn" data-dir="center">●</button>
+                <button class="dpad-btn" data-dir="right">→</button>
+                <button class="dpad-btn" data-dir="down-left">↙</button>
+                <button class="dpad-btn" data-dir="down">↓</button>
+                <button class="dpad-btn" data-dir="down-right">↘</button>
             </div>
             
             <div class="action-buttons">
@@ -161,7 +162,6 @@
         </div>
     </div>
 
-    <script src="joystick.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
