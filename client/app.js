@@ -652,76 +652,71 @@ class FootballGame {
     
     // ===================== НОВОЕ ДВИЖЕНИЕ С НУЛЯ =====================
     handleJoystickMove(direction) {
-        // 1. Определяем, двигается ли джостик
         const isMoving = Math.abs(direction.x) > 0.15 || Math.abs(direction.y) > 0.15;
         
-        // 2. Если НЕ двигается — отправляем ЦЕНТР (остановка)
         if (!isMoving) {
-            // Отправляем центр только если до этого было движение
-            if (this._currentDirection.x !== 0 || this._currentDirection.y !== 0) {
-                this._currentDirection = { x: 0, y: 0 };
+            // ✅ ФИКСИРОВАННЫЙ ЦЕНТР ПОЛЯ (НЕ ЗАВИСИТ ОТ РАЗМЕРА ЭКРАНА!)
+            if (this._lastMoveState.x !== 400 || this._lastMoveState.y !== 300) {
                 this.moveState = {
-                    x: this.canvas.width / 2,
-                    y: this.canvas.height / 2
+                    x: 400,
+                    y: 300
                 };
-                console.log('🛑 ОСТАНОВКА: центр');
+                this._lastMoveState = {
+                    x: 400,
+                    y: 300
+                };
             }
             return;
         }
         
-        // 3. Определяем 8 направлений
+        // ✅ ФИКСИРОВАННОЕ ПОЛЕ 800x600
+        const fieldWidth = 800;
+        const fieldHeight = 600;
+        const margin = 35;
+        const offset = 200;
+        
+        // Определяем направление
         let dirX = 0;
         let dirY = 0;
         
-        // По горизонтали
         if (direction.x > 0.15) dirX = 1;
         else if (direction.x < -0.15) dirX = -1;
         
-        // По вертикали
         if (direction.y > 0.15) dirY = 1;
         else if (direction.y < -0.15) dirY = -1;
         
-        // 4. Проверяем, изменилось ли направление
-        if (this._currentDirection.x === dirX && this._currentDirection.y === dirY) {
-            // Направление не изменилось — ничего не делаем
+        // Если оба нуля — стоим
+        if (dirX === 0 && dirY === 0) {
+            if (this._lastMoveState.x !== 400 || this._lastMoveState.y !== 300) {
+                this.moveState = {
+                    x: 400,
+                    y: 300
+                };
+                this._lastMoveState = {
+                    x: 400,
+                    y: 300
+                };
+            }
             return;
         }
         
-        // 5. Сохраняем новое направление
-        this._currentDirection = { x: dirX, y: dirY };
-        
-        // 6. Вычисляем координаты
-        const fieldWidth = this.canvas.width;
-        const fieldHeight = this.canvas.height;
-        const margin = 35;
-        const offset = Math.min(fieldWidth, fieldHeight) * 0.3;
-        
-        let targetX = fieldWidth / 2 + dirX * offset;
-        let targetY = fieldHeight / 2 + dirY * offset;
+        let targetX = 400 + dirX * offset;
+        let targetY = 300 + dirY * offset;
         
         targetX = Math.round(Math.max(margin, Math.min(fieldWidth - margin, targetX)));
         targetY = Math.round(Math.max(margin, Math.min(fieldHeight - margin, targetY)));
         
-        // 7. Отправляем новые координаты
-        this.moveState = {
-            x: targetX,
-            y: targetY
-        };
-        
-        // Логируем для отладки
-        const dirNames = {
-            '0,0': 'СТОЯТЬ',
-            '1,0': 'ВПРАВО',
-            '-1,0': 'ВЛЕВО',
-            '0,1': 'ВНИЗ',
-            '0,-1': 'ВВЕРХ',
-            '1,1': 'ВНИЗ-ВПРАВО',
-            '1,-1': 'ВВЕРХ-ВПРАВО',
-            '-1,1': 'ВНИЗ-ВЛЕВО',
-            '-1,-1': 'ВВЕРХ-ВЛЕВО'
-        };
-        const key = `${dirX},${dirY}`;
-        console.log(`🏃 ${dirNames[key] || 'НЕИЗВЕСТНО'} → (${targetX}, ${targetY})`);
+        // Отправляем только если изменилось
+        if (this._lastMoveState.x !== targetX || this._lastMoveState.y !== targetY) {
+            this.moveState = {
+                x: targetX,
+                y: targetY
+            };
+            this._lastMoveState = {
+                x: targetX,
+                y: targetY
+            };
+        }
     }
     // ====================================================================
     
