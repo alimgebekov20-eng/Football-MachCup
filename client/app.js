@@ -15,7 +15,9 @@ class FootballGame {
         this.isFullscreen = false;
         this._hasReceivedState = false;
         this._canMove = false;
-        this._lastMoveState = { x: 0, y: 0 };
+        
+        // НОВАЯ ПЕРЕМЕННАЯ ДЛЯ ТЕКУЩЕГО НАПРАВЛЕНИЯ
+        this._currentDirection = { x: 0, y: 0 };
         
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
@@ -67,6 +69,7 @@ class FootballGame {
         this.finalTeam2 = document.getElementById('finalTeam2');
         this.winnerMessage = document.getElementById('winnerMessage');
         
+        // ПОДКЛЮЧАЕМ ДЖОСТИК
         this.joystick = new VirtualJoystick('joystickBase', 'joystickThumb');
         this.joystick.onMove((direction) => this.handleJoystickMove(direction));
         
@@ -491,6 +494,7 @@ class FootballGame {
         this.resizeCanvas();
         this.gameOverModal.classList.remove('active');
         
+        // Обратный отсчёт
         let countdown = 5;
         this.timerElement.textContent = '⚡' + countdown;
         this.timerElement.style.color = '#ffd700';
@@ -501,6 +505,8 @@ class FootballGame {
         this.kickBtn.style.opacity = '0.5';
         this.tackleBtn.style.opacity = '0.5';
         
+        // СБРАСЫВАЕМ НАПРАВЛЕНИЕ
+        this._currentDirection = { x: 0, y: 0 };
         this.moveState = {
             x: this.canvas.width / 2,
             y: this.canvas.height / 2
@@ -527,12 +533,7 @@ class FootballGame {
                 this.kickBtn.style.opacity = '1';
                 this.tackleBtn.style.opacity = '1';
                 
-                this.moveState = {
-                    x: this.canvas.width / 2,
-                    y: this.canvas.height / 2
-                };
-                
-                console.log('🚀 МАТЧ НАЧАЛСЯ! Движение разрешено');
+                console.log('🚀 МАТЧ НАЧАЛСЯ!');
             }
         }, 1000);
         
@@ -579,21 +580,13 @@ class FootballGame {
         
         this.moveInterval = setInterval(() => {
             if (this.isRunning && this.ws && this.ws.readyState === WebSocket.OPEN && this._canMove) {
-                const currentX = Math.round(this.moveState.x);
-                const currentY = Math.round(this.moveState.y);
-                const lastX = Math.round(this._lastMoveState.x);
-                const lastY = Math.round(this._lastMoveState.y);
-                
-                if (currentX !== lastX || currentY !== lastY) {
+                // Отправляем только если есть движение
+                if (this.moveState.x !== 0 && this.moveState.y !== 0) {
                     this.ws.send(JSON.stringify({
                         type: 'player_movement',
                         x: this.moveState.x,
                         y: this.moveState.y
                     }));
-                    this._lastMoveState = {
-                        x: this.moveState.x,
-                        y: this.moveState.y
-                    };
                 }
             }
         }, 50);
@@ -648,6 +641,7 @@ class FootballGame {
         this.isRunning = false;
         this._hasReceivedState = false;
         this._canMove = false;
+        this._currentDirection = { x: 0, y: 0 };
         if (this.moveInterval) {
             clearInterval(this.moveInterval);
             this.moveInterval = null;
@@ -656,58 +650,47 @@ class FootballGame {
         this.showScreen('menuScreen');
     }
     
-    // ===================== 8 НАПРАВЛЕНИЙ (Shadow Fight 2 стиль) =====================
+    // ===================== НОВОЕ ДВИЖЕНИЕ С НУЛЯ =====================
     handleJoystickMove(direction) {
+        // 1. Определяем, двигается ли джостик
         const isMoving = Math.abs(direction.x) > 0.15 || Math.abs(direction.y) > 0.15;
         
+        // 2. Если НЕ двигается — отправляем ЦЕНТР (остановка)
         if (!isMoving) {
-            // ОСТАНОВКА — отправляем центр, но только 1 раз
-            const centerX = this.canvas.width / 2;
-            const centerY = this.canvas.height / 2;
-            
-            if (this._lastMoveState.x !== centerX || this._lastMoveState.y !== centerY) {
+            // Отправляем центр только если до этого было движение
+            if (this._currentDirection.x !== 0 || this._currentDirection.y !== 0) {
+                this._currentDirection = { x: 0, y: 0 };
                 this.moveState = {
-                    x: centerX,
-                    y: centerY
+                    x: this.canvas.width / 2,
+                    y: this.canvas.height / 2
                 };
-                this._lastMoveState = {
-                    x: centerX,
-                    y: centerY
-                };
+                console.log('🛑 ОСТАНОВКА: центр');
             }
             return;
         }
         
-        // 🔥 8 НАПРАВЛЕНИЙ
+        // 3. Определяем 8 направлений
         let dirX = 0;
         let dirY = 0;
         
-        // Определяем направление по X
+        // По горизонтали
         if (direction.x > 0.15) dirX = 1;
         else if (direction.x < -0.15) dirX = -1;
         
-        // Определяем направление по Y
+        // По вертикали
         if (direction.y > 0.15) dirY = 1;
         else if (direction.y < -0.15) dirY = -1;
         
-        // Если оба нуля — стоим
-        if (dirX === 0 && dirY === 0) {
-            const centerX = this.canvas.width / 2;
-            const centerY = this.canvas.height / 2;
-            if (this._lastMoveState.x !== centerX || this._lastMoveState.y !== centerY) {
-                this.moveState = {
-                    x: centerX,
-                    y: centerY
-                };
-                this._lastMoveState = {
-                    x: centerX,
-                    y: centerY
-                };
-            }
+        // 4. Проверяем, изменилось ли направление
+        if (this._currentDirection.x === dirX && this._currentDirection.y === dirY) {
+            // Направление не изменилось — ничего не делаем
             return;
         }
         
-        // Вычисляем целевую позицию (диагональ или прямо)
+        // 5. Сохраняем новое направление
+        this._currentDirection = { x: dirX, y: dirY };
+        
+        // 6. Вычисляем координаты
         const fieldWidth = this.canvas.width;
         const fieldHeight = this.canvas.height;
         const margin = 35;
@@ -716,24 +699,29 @@ class FootballGame {
         let targetX = fieldWidth / 2 + dirX * offset;
         let targetY = fieldHeight / 2 + dirY * offset;
         
-        targetX = Math.max(margin, Math.min(fieldWidth - margin, targetX));
-        targetY = Math.max(margin, Math.min(fieldHeight - margin, targetY));
+        targetX = Math.round(Math.max(margin, Math.min(fieldWidth - margin, targetX)));
+        targetY = Math.round(Math.max(margin, Math.min(fieldHeight - margin, targetY)));
         
-        // Округляем до целых, чтобы координаты были строгими
-        targetX = Math.round(targetX);
-        targetY = Math.round(targetY);
+        // 7. Отправляем новые координаты
+        this.moveState = {
+            x: targetX,
+            y: targetY
+        };
         
-        // Отправляем только если изменилось
-        if (this._lastMoveState.x !== targetX || this._lastMoveState.y !== targetY) {
-            this.moveState = {
-                x: targetX,
-                y: targetY
-            };
-            this._lastMoveState = {
-                x: targetX,
-                y: targetY
-            };
-        }
+        // Логируем для отладки
+        const dirNames = {
+            '0,0': 'СТОЯТЬ',
+            '1,0': 'ВПРАВО',
+            '-1,0': 'ВЛЕВО',
+            '0,1': 'ВНИЗ',
+            '0,-1': 'ВВЕРХ',
+            '1,1': 'ВНИЗ-ВПРАВО',
+            '1,-1': 'ВВЕРХ-ВПРАВО',
+            '-1,1': 'ВНИЗ-ВЛЕВО',
+            '-1,-1': 'ВВЕРХ-ВЛЕВО'
+        };
+        const key = `${dirX},${dirY}`;
+        console.log(`🏃 ${dirNames[key] || 'НЕИЗВЕСТНО'} → (${targetX}, ${targetY})`);
     }
     // ====================================================================
     
