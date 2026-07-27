@@ -30,6 +30,7 @@ class GameLogic {
     };
     
     this._started = false;
+    this._ballOwner = null; // 👈 НОВАЯ ПЕРЕМЕННАЯ
   }
 
   addPlayer(playerId, playerName, team) {
@@ -145,6 +146,7 @@ class GameLogic {
     this.ball.y = 300;
     this.ball.vx = 0;
     this.ball.vy = 0;
+    this._ballOwner = null;
 
     const firstPlayer = Array.from(this.players.values())[0];
     if (firstPlayer) {
@@ -158,12 +160,29 @@ class GameLogic {
     const player = this.players.get(playerId);
     if (player) {
       player.hasBall = true;
+      this._ballOwner = player;
       this.ball.x = player.x + (player.team === 'team1' ? 25 : -25);
       this.ball.y = player.y;
       this.ball.vx = 0;
       this.ball.vy = 0;
     }
   }
+
+  // ========== НОВЫЙ МЕТОД: ПЕРЕХВАТ МЯЧА ==========
+  checkBallPickup() {
+    for (const [id, player] of this.players) {
+      if (player.hasBall) continue;
+      
+      const dist = Math.hypot(player.x - this.ball.x, player.y - this.ball.y);
+      
+      if (dist < 30 && !this._ballOwner) {
+        this.giveBall(player.id);
+        console.log(`🤲 ${player.name} подобрал мяч`);
+        return;
+      }
+    }
+  }
+  // =================================================
 
   playerKick(playerId) {
     const player = this.players.get(playerId);
@@ -172,6 +191,7 @@ class GameLogic {
     this.ball.vx = power * player.direction;
     this.ball.vy = (Math.random() - 0.5) * 3;
     player.hasBall = false;
+    this._ballOwner = null;
     this.checkGoal();
   }
 
@@ -183,6 +203,7 @@ class GameLogic {
       const dist = Math.hypot(player.x - target.x, player.y - target.y);
       if (dist < 40) {
         target.hasBall = false;
+        this._ballOwner = null;
         this.giveBall(playerId);
         break;
       }
@@ -193,7 +214,6 @@ class GameLogic {
     const player = this.players.get(playerId);
     if (!player || !this.isRunning) return;
     
-    // Уменьшаем margin до 5, чтобы игрок мог подходить к воротам
     const margin = 5;
     const targetX = Math.max(margin, Math.min(this.field.width - margin, x));
     const targetY = Math.max(margin, Math.min(this.field.height - margin, y));
@@ -205,17 +225,14 @@ class GameLogic {
     else if (x < player.x) player.direction = -1;
   }
 
-  // ========== НОВЫЙ МЕТОД ДЛЯ ОСТАНОВКИ ==========
   stopPlayer(playerId) {
     const player = this.players.get(playerId);
     if (!player) return;
     
-    // Останавливаем — target = текущая позиция
     player.targetX = player.x;
     player.targetY = player.y;
     console.log(`🛑 ${player.name} остановлен по команде`);
   }
-  // ===============================================
 
   checkGoal() {
     const bx = this.ball.x;
@@ -263,6 +280,8 @@ class GameLogic {
         break;
       }
     }
+    
+    this._ballOwner = ballOwner;
 
     if (ballOwner) {
       const offsetX = ballOwner.team === 'team1' ? 25 : -25;
@@ -289,6 +308,10 @@ class GameLogic {
         this.ball.vy *= -0.6;
         this.ball.y = Math.max(r, Math.min(h - r, this.ball.y));
       }
+      
+      // 👇 ПРОВЕРЯЕМ ПЕРЕХВАТ МЯЧА
+      this.checkBallPickup();
+      
       this.checkGoal();
     }
   }
