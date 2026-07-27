@@ -29,7 +29,6 @@ class GameLogic {
       team2: 0,
     };
     
-    // Флаг, что игра точно запущена
     this._started = false;
   }
 
@@ -73,10 +72,8 @@ class GameLogic {
     this.timer = 120;
     this._started = true;
 
-    // Размещаем игроков
     this.resetPositions();
 
-    // ТАЙМЕР
     if (this.timerInterval) clearInterval(this.timerInterval);
     this.timerInterval = setInterval(() => {
       this.timer--;
@@ -86,20 +83,17 @@ class GameLogic {
       }
     }, 1000);
 
-    // ФИЗИКА (30 FPS)
     if (this.updateInterval) clearInterval(this.updateInterval);
     this.updateInterval = setInterval(() => {
       this.update();
     }, 1000 / 30);
 
-    // ОТПРАВКА СОСТОЯНИЯ (20 FPS) — ЯВНО ЗАПУСКАЕМ
     if (this.broadcastInterval) clearInterval(this.broadcastInterval);
     this.broadcastInterval = setInterval(() => {
       if (!this.isRunning) {
         clearInterval(this.broadcastInterval);
         return;
       }
-      // Триггерим внешнюю рассылку через глобальный объект
       if (global.broadcastGameState) {
         global.broadcastGameState(this.gameId);
       }
@@ -143,6 +137,8 @@ class GameLogic {
       player.hasBall = false;
       player.targetX = player.x;
       player.targetY = player.y;
+      
+      console.log(`📍 Сброс позиции ${player.name}: (${player.x}, ${player.y})`);
     }
 
     this.ball.x = 400;
@@ -193,15 +189,56 @@ class GameLogic {
     }
   }
 
+  // ===================== ГЛАВНОЕ ИСПРАВЛЕНИЕ =====================
   updatePlayerPosition(playerId, x, y) {
     const player = this.players.get(playerId);
     if (!player || !this.isRunning) return;
+    
+    // 👇 ЕСЛИ КООРДИНАТЫ ВНЕ ПОЛЯ — ИГНОРИРУЕМ
+    if (x < 0 || x > this.field.width || y < 0 || y > this.field.height) {
+      console.log(`⚠️ ${player.name}: координаты вне поля (${x}, ${y}) — ИГНОР`);
+      return;
+    }
+    
+    // 👇 ЕСЛИ КООРДИНАТЫ В ПРАВОМ НИЖНЕМ УГЛУ — ОСТАНАВЛИВАЕМ
+    if (x > 750 && y > 550) {
+      console.log(`🛑 ${player.name}: попытка уйти в угол (${x}, ${y}) — ОСТАНОВКА`);
+      player.targetX = player.x;
+      player.targetY = player.y;
+      return;
+    }
+    
+    // 👇 ЕСЛИ КООРДИНАТЫ В ЛЕВОМ ВЕРХНЕМ УГЛУ — ОСТАНАВЛИВАЕМ
+    if (x < 50 && y < 50) {
+      console.log(`🛑 ${player.name}: попытка уйти в угол (${x}, ${y}) — ОСТАНОВКА`);
+      player.targetX = player.x;
+      player.targetY = player.y;
+      return;
+    }
+    
+    // Нормальная обработка
     const margin = 25;
-    player.targetX = Math.max(margin, Math.min(this.field.width - margin, x));
-    player.targetY = Math.max(margin, Math.min(this.field.height - margin, y));
+    const targetX = Math.max(margin, Math.min(this.field.width - margin, x));
+    const targetY = Math.max(margin, Math.min(this.field.height - margin, y));
+    
+    // Если координаты сильно отличаются от текущих — проверяем
+    const dist = Math.hypot(targetX - player.x, targetY - player.y);
+    if (dist > 100) {
+      console.log(`⚠️ ${player.name}: слишком большой скачок (${dist}px) — ОГРАНИЧИВАЕМ`);
+      const angle = Math.atan2(targetY - player.y, targetX - player.x);
+      player.targetX = player.x + Math.cos(angle) * 100;
+      player.targetY = player.y + Math.sin(angle) * 100;
+    } else {
+      player.targetX = targetX;
+      player.targetY = targetY;
+    }
+    
+    console.log(`📥 ${player.name} → target: (${player.targetX}, ${player.targetY})`);
+    
     if (x > player.x) player.direction = 1;
     else if (x < player.x) player.direction = -1;
   }
+  // ================================================================
 
   checkGoal() {
     const bx = this.ball.x;
@@ -231,7 +268,6 @@ class GameLogic {
   update() {
     if (!this.isRunning) return;
 
-    // Движение игроков
     for (const [id, player] of this.players) {
       const dx = player.targetX - player.x;
       const dy = player.targetY - player.y;
@@ -243,7 +279,6 @@ class GameLogic {
       }
     }
 
-    // Физика мяча
     let ballOwner = null;
     for (const [id, p] of this.players) {
       if (p.hasBall) {
@@ -295,7 +330,6 @@ class GameLogic {
       });
     }
 
-    // ЛОГ ДЛЯ ОТЛАДКИ — ВИДНО, ЧТО ДАННЫЕ ЕСТЬ
     console.log(`📊 getState: ${playersState.length} игроков, мяч (${this.ball.x}, ${this.ball.y})`);
 
     return {
