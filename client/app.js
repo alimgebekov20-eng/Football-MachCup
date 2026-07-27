@@ -18,7 +18,6 @@ class FootballGame {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
         
-        // DOM элементы
         this.loginScreen = document.getElementById('loginScreen');
         this.menuScreen = document.getElementById('menuScreen');
         this.createLobbyScreen = document.getElementById('createLobbyScreen');
@@ -66,7 +65,6 @@ class FootballGame {
         this.finalTeam2 = document.getElementById('finalTeam2');
         this.winnerMessage = document.getElementById('winnerMessage');
         
-        // Переменные для движения
         this._moveX = 400;
         this._moveY = 300;
         
@@ -81,7 +79,6 @@ class FootballGame {
     
     sendMove() {
         if (!this.isRunning || !this.ws || this.ws.readyState !== WebSocket.OPEN) return;
-        // Отправляем всегда, даже если центр (чтобы сервер знал)
         this.ws.send(JSON.stringify({
             type: 'player_movement',
             x: this._moveX,
@@ -107,26 +104,9 @@ class FootballGame {
         
         const setDirection = (dir) => {
             if (!dir) {
-                // Остановка — ищем текущую позицию игрока
-                let myPlayer = null;
-                for (const id in this.players) {
-                    if (this.players[id].id === this.playerId) {
-                        myPlayer = this.players[id];
-                        break;
-                    }
-                }
-                
-                if (myPlayer) {
-                    // Отправляем текущую позицию → игрок останавливается
-                    const px = (myPlayer.x / 800) * this.canvas.width;
-                    const py = (myPlayer.y / 600) * this.canvas.height;
-                    this._moveX = px;
-                    this._moveY = py;
-                    console.log(`🛑 ОСТАНОВКА: (${px}, ${py})`);
-                } else {
-                    this._moveX = this.canvas.width / 2;
-                    this._moveY = this.canvas.height / 2;
-                }
+                // ✅ ОСТАНОВКА: центр (400, 300)
+                this._moveX = 400;
+                this._moveY = 300;
                 return;
             }
             
@@ -137,9 +117,8 @@ class FootballGame {
             targetX = Math.round(Math.max(margin, Math.min(800 - margin, targetX)));
             targetY = Math.round(Math.max(margin, Math.min(600 - margin, targetY)));
             
-            // Масштабируем под размер Canvas
-            this._moveX = (targetX / 800) * this.canvas.width;
-            this._moveY = (targetY / 600) * this.canvas.height;
+            this._moveX = targetX;
+            this._moveY = targetY;
         };
         
         const highlightBtn = (btn) => {
@@ -162,7 +141,6 @@ class FootballGame {
             setDirection(null);
         };
         
-        // События на кнопках
         buttons.forEach(btn => {
             btn.addEventListener('touchstart', (e) => handleStart(e, btn), { passive: false });
             btn.addEventListener('touchend', handleEnd, { passive: false });
@@ -172,7 +150,6 @@ class FootballGame {
             btn.addEventListener('mouseleave', handleEnd);
         });
         
-        // Проведение пальцем
         let currentHighlight = null;
         
         dpad.addEventListener('touchmove', (e) => {
@@ -493,9 +470,8 @@ class FootballGame {
         this.resizeCanvas();
         this.gameOverModal.classList.remove('active');
         
-        // Сбрасываем движение в центр
-        this._moveX = this.canvas.width / 2;
-        this._moveY = this.canvas.height / 2;
+        this._moveX = 400;
+        this._moveY = 300;
         
         let countdown = 5;
         this.timerElement.textContent = '⚡' + countdown;
@@ -601,8 +577,8 @@ class FootballGame {
     handleBackToMenu() {
         this.isRunning = false;
         this._hasReceivedState = false;
-        this._moveX = this.canvas.width / 2;
-        this._moveY = this.canvas.height / 2;
+        this._moveX = 400;
+        this._moveY = 300;
         this.gameOverModal.classList.remove('active');
         this.showScreen('menuScreen');
     }
