@@ -14,6 +14,7 @@ class FootballGame {
         this.score = { team1: 0, team2: 0 };
         this.isFullscreen = false;
         this._hasReceivedState = false;
+        this._isStopped = false; // 👈 НОВАЯ ПЕРЕМЕННАЯ
         
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
@@ -79,7 +80,8 @@ class FootballGame {
     
     sendMove() {
         if (!this.isRunning || !this.ws || this.ws.readyState !== WebSocket.OPEN) return;
-        // Отправляем движение только если не в центре
+        // ✅ НЕ ОТПРАВЛЯЕМ, ЕСЛИ ОСТАНОВЛЕНЫ
+        if (this._isStopped) return;
         if (this._moveX !== 400 || this._moveY !== 300) {
             this.ws.send(JSON.stringify({
                 type: 'player_movement',
@@ -107,15 +109,21 @@ class FootballGame {
         
         const setDirection = (dir) => {
             if (!dir) {
-                // ✅ ОТПРАВЛЯЕМ КОМАНДУ ОСТАНОВКИ
+                // ✅ МГНОВЕННАЯ ОСТАНОВКА
+                this._isStopped = true;
+                this._moveX = 400;
+                this._moveY = 300;
+                
                 if (this.isRunning && this.ws && this.ws.readyState === WebSocket.OPEN) {
                     this.ws.send(JSON.stringify({
                         type: 'player_stop'
                     }));
-                    console.log('🛑 ОСТАНОВКА (команда stop)');
                 }
                 return;
             }
+            
+            // Снимаем блокировку при движении
+            this._isStopped = false;
             
             const offset = 200;
             const margin = 35;
@@ -469,6 +477,7 @@ class FootballGame {
         this.timer = data.duration || 120;
         this.team = data.team;
         this._hasReceivedState = false;
+        this._isStopped = false;
         
         this.team1Name.textContent = this.team === 'team1' ? '👤 Вы' : '👤 Соперник';
         this.team2Name.textContent = this.team === 'team2' ? '👤 Вы' : '👤 Соперник';
@@ -477,7 +486,6 @@ class FootballGame {
         this.resizeCanvas();
         this.gameOverModal.classList.remove('active');
         
-        // Сбрасываем движение в центр
         this._moveX = 400;
         this._moveY = 300;
         
@@ -585,6 +593,7 @@ class FootballGame {
     handleBackToMenu() {
         this.isRunning = false;
         this._hasReceivedState = false;
+        this._isStopped = false;
         this._moveX = 400;
         this._moveY = 300;
         this.gameOverModal.classList.remove('active');
