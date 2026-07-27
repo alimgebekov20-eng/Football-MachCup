@@ -66,7 +66,7 @@ class FootballGame {
         this.finalTeam2 = document.getElementById('finalTeam2');
         this.winnerMessage = document.getElementById('winnerMessage');
         
-        // ========== ПЕРЕМЕННЫЕ ДЛЯ ДЖОСТИКА ==========
+        // Переменные для джостика
         this._moveX = 400;
         this._moveY = 300;
         this._joystickActive = false;
@@ -97,14 +97,12 @@ class FootballGame {
         const base = document.getElementById('joystickBase');
         const thumb = document.getElementById('joystickThumb');
         
-        // Размеры
         const baseSize = base.offsetWidth;
         const thumbSize = thumb.offsetWidth;
         const maxDist = (baseSize - thumbSize) / 2 - 5;
         
         let active = false;
         
-        // Получить позицию пальца/мыши
         const getPosition = (e) => {
             const rect = base.getBoundingClientRect();
             const centerX = rect.left + rect.width / 2;
@@ -125,7 +123,6 @@ class FootballGame {
             };
         };
         
-        // Обновить джостик
         const updateJoystick = (dx, dy) => {
             const distance = Math.hypot(dx, dy);
             let normX = dx;
@@ -136,26 +133,21 @@ class FootballGame {
                 normY = (dy / distance) * maxDist;
             }
             
-            // Обновляем позицию thumb
             const percentX = (normX / maxDist) * 100;
             const percentY = (normY / maxDist) * 100;
             thumb.style.transform = `translate(calc(-50% + ${percentX}%), calc(-50% + ${percentY}%))`;
             
-            // Отправляем направление
             const dirX = normX / maxDist;
             const dirY = normY / maxDist;
             
-            // Мертвая зона 15%
             const deadZone = 0.15;
             let moveX = 0;
             let moveY = 0;
             
             if (Math.abs(dirX) > deadZone || Math.abs(dirY) > deadZone) {
-                // Нормализуем с учётом dead zone
                 const clampedX = Math.sign(dirX) * ((Math.abs(dirX) - deadZone) / (1 - deadZone));
                 const clampedY = Math.sign(dirY) * ((Math.abs(dirY) - deadZone) / (1 - deadZone));
                 
-                // Отправляем координаты (8 направлений)
                 const threshold = 0.3;
                 const dirXFinal = Math.abs(clampedX) > threshold ? Math.sign(clampedX) : 0;
                 const dirYFinal = Math.abs(clampedY) > threshold ? Math.sign(clampedY) : 0;
@@ -164,7 +156,6 @@ class FootballGame {
                 moveY = dirYFinal;
             }
             
-            // Если движение есть — отправляем
             if (moveX !== 0 || moveY !== 0) {
                 this._isStopped = false;
                 const offset = 200;
@@ -176,7 +167,6 @@ class FootballGame {
                 this._moveX = targetX;
                 this._moveY = targetY;
             } else {
-                // Джостик в центре — останавливаемся
                 this._isStopped = true;
                 this._moveX = 400;
                 this._moveY = 300;
@@ -188,7 +178,6 @@ class FootballGame {
             }
         };
         
-        // Сброс джостика
         const resetJoystick = () => {
             active = false;
             thumb.style.transform = 'translate(-50%, -50%)';
@@ -202,7 +191,6 @@ class FootballGame {
             }
         };
         
-        // Touch события
         base.addEventListener('touchstart', (e) => {
             e.preventDefault();
             active = true;
@@ -227,7 +215,6 @@ class FootballGame {
             resetJoystick();
         }, { passive: false });
         
-        // Mouse события (для ПК)
         base.addEventListener('mousedown', (e) => {
             active = true;
             const pos = getPosition(e);
@@ -676,10 +663,33 @@ class FootballGame {
     
     resizeCanvas() {
         if (!this.canvas) return;
+        
         const headerHeight = document.querySelector('.game-header')?.offsetHeight || 50;
         const controlsHeight = 220;
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight - headerHeight - controlsHeight;
+        
+        const availWidth = window.innerWidth;
+        const availHeight = window.innerHeight - headerHeight - controlsHeight;
+        
+        // Сохраняем пропорции 4:3 (800:600)
+        const aspectRatio = 4 / 3;
+        let width = availWidth;
+        let height = availHeight;
+        
+        if (width / height > aspectRatio) {
+            width = height * aspectRatio;
+        } else {
+            height = width / aspectRatio;
+        }
+        
+        this.canvas.width = width;
+        this.canvas.height = height;
+        this.canvas.style.width = width + 'px';
+        this.canvas.style.height = height + 'px';
+        this.canvas.style.margin = '0 auto';
+        this.canvas.style.display = 'block';
+        
+        this.fieldWidth = 800;
+        this.fieldHeight = 600;
     }
     
     gameLoop() {
@@ -695,6 +705,7 @@ class FootballGame {
         
         ctx.clearRect(0, 0, w, h);
         
+        // --- ПОЛЕ ---
         const gradient = ctx.createLinearGradient(0, 0, 0, h);
         gradient.addColorStop(0, '#2d8a4e');
         gradient.addColorStop(0.5, '#3ca55c');
@@ -702,6 +713,7 @@ class FootballGame {
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, w, h);
         
+        // Полосы
         ctx.strokeStyle = 'rgba(255,255,255,0.08)';
         ctx.lineWidth = 1;
         for (let i = 0; i < h; i += 40) {
@@ -711,27 +723,39 @@ class FootballGame {
             ctx.stroke();
         }
         
+        // --- РАЗМЕТКА (масштабируем от 800x600) ---
+        const scaleX = w / 800;
+        const scaleY = h / 600;
+        
         ctx.strokeStyle = 'rgba(255,255,255,0.4)';
         ctx.lineWidth = 2;
+        
+        // Центральная линия
         ctx.beginPath();
-        ctx.moveTo(w/2, 20);
-        ctx.lineTo(w/2, h-20);
+        ctx.moveTo(400 * scaleX, 20 * scaleY);
+        ctx.lineTo(400 * scaleX, 580 * scaleY);
         ctx.stroke();
+        
+        // Центральный круг
         ctx.beginPath();
-        ctx.arc(w/2, h/2, Math.min(w, h) * 0.08, 0, Math.PI * 2);
+        ctx.arc(400 * scaleX, 300 * scaleY, 50 * scaleX, 0, Math.PI * 2);
         ctx.stroke();
+        
+        // Центральная точка
         ctx.beginPath();
-        ctx.arc(w/2, h/2, 4, 0, Math.PI * 2);
+        ctx.arc(400 * scaleX, 300 * scaleY, 4 * scaleX, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(255,255,255,0.4)';
         ctx.fill();
         
-        const goalWidth = 50;
-        const goalHeight = h * 0.2;
-        const goalY = h/2 - goalHeight/2;
-        const goalDepth = 15;
+        // --- ВОРОТА ---
+        const goalWidth = 50 * scaleX;
+        const goalHeight = 120 * scaleY;
+        const goalY = 300 * scaleY - goalHeight / 2;
+        const goalDepth = 15 * scaleX;
         
+        // Левые ворота
         ctx.strokeStyle = 'rgba(255,255,255,0.7)';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 3 * scaleX;
         ctx.beginPath();
         ctx.moveTo(0, goalY);
         ctx.lineTo(goalDepth, goalY);
@@ -739,24 +763,26 @@ class FootballGame {
         ctx.lineTo(0, goalY + goalHeight);
         ctx.stroke();
         
+        // Сетка ворот (левая)
         ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-        ctx.lineWidth = 1;
-        const gridSize = 8;
-        for (let y = goalY + 5; y < goalY + goalHeight - 5; y += gridSize) {
+        ctx.lineWidth = 1 * scaleX;
+        const gridSize = 8 * scaleX;
+        for (let y = goalY + 5 * scaleY; y < goalY + goalHeight - 5 * scaleY; y += gridSize) {
             ctx.beginPath();
-            ctx.moveTo(1, y);
-            ctx.lineTo(goalDepth - 1, y);
+            ctx.moveTo(1 * scaleX, y);
+            ctx.lineTo(goalDepth - 1 * scaleX, y);
             ctx.stroke();
         }
-        for (let x = 2; x < goalDepth - 2; x += gridSize) {
+        for (let x = 2 * scaleX; x < goalDepth - 2 * scaleX; x += gridSize) {
             ctx.beginPath();
-            ctx.moveTo(x, goalY + 5);
-            ctx.lineTo(x, goalY + goalHeight - 5);
+            ctx.moveTo(x, goalY + 5 * scaleY);
+            ctx.lineTo(x, goalY + goalHeight - 5 * scaleY);
             ctx.stroke();
         }
         
+        // Правые ворота
         ctx.strokeStyle = 'rgba(255,255,255,0.7)';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 3 * scaleX;
         ctx.beginPath();
         ctx.moveTo(w, goalY);
         ctx.lineTo(w - goalDepth, goalY);
@@ -764,39 +790,44 @@ class FootballGame {
         ctx.lineTo(w, goalY + goalHeight);
         ctx.stroke();
         
+        // Сетка ворот (правая)
         ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-        ctx.lineWidth = 1;
-        for (let y = goalY + 5; y < goalY + goalHeight - 5; y += gridSize) {
+        ctx.lineWidth = 1 * scaleX;
+        for (let y = goalY + 5 * scaleY; y < goalY + goalHeight - 5 * scaleY; y += gridSize) {
             ctx.beginPath();
-            ctx.moveTo(w - 1, y);
-            ctx.lineTo(w - goalDepth + 1, y);
+            ctx.moveTo(w - 1 * scaleX, y);
+            ctx.lineTo(w - goalDepth + 1 * scaleX, y);
             ctx.stroke();
         }
-        for (let x = w - 2; x > w - goalDepth + 2; x -= gridSize) {
+        for (let x = w - 2 * scaleX; x > w - goalDepth + 2 * scaleX; x -= gridSize) {
             ctx.beginPath();
-            ctx.moveTo(x, goalY + 5);
-            ctx.lineTo(x, goalY + goalHeight - 5);
+            ctx.moveTo(x, goalY + 5 * scaleY);
+            ctx.lineTo(x, goalY + goalHeight - 5 * scaleY);
             ctx.stroke();
         }
         
+        // --- ШТРАФНЫЕ ---
         ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-        ctx.lineWidth = 2;
-        const penaltyWidth = 80;
-        const penaltyHeight = goalHeight + 40;
-        const penaltyY = h/2 - penaltyHeight/2;
+        ctx.lineWidth = 2 * scaleX;
+        const penaltyWidth = 80 * scaleX;
+        const penaltyHeight = goalHeight + 40 * scaleY;
+        const penaltyY = 300 * scaleY - penaltyHeight / 2;
         ctx.strokeRect(0, penaltyY, penaltyWidth, penaltyHeight);
         ctx.strokeRect(w - penaltyWidth, penaltyY, penaltyWidth, penaltyHeight);
         
+        // --- МЯЧ ---
         if (this.ball && this.ball.x !== undefined) {
-            const bx = (this.ball.x / 800) * w;
-            const by = (this.ball.y / 600) * h;
-            const br = Math.max(6, (this.ball.radius || 10) / 800 * w * 1.2);
+            const bx = this.ball.x * scaleX;
+            const by = this.ball.y * scaleY;
+            const br = Math.max(6, this.ball.radius * scaleX);
+            
             ctx.shadowColor = 'rgba(255,255,255,0.3)';
             ctx.shadowBlur = 10;
             ctx.beginPath();
             ctx.arc(bx + 2, by + 2, br, 0, Math.PI * 2);
             ctx.fillStyle = 'rgba(0,0,0,0.2)';
             ctx.fill();
+            
             ctx.shadowColor = 'rgba(255,255,255,0.2)';
             ctx.shadowBlur = 8;
             ctx.beginPath();
@@ -808,6 +839,7 @@ class FootballGame {
             ctx.fillStyle = ballGrad;
             ctx.fill();
             ctx.shadowBlur = 0;
+            
             ctx.strokeStyle = 'rgba(100,100,100,0.3)';
             ctx.lineWidth = 0.5;
             ctx.beginPath();
@@ -823,19 +855,22 @@ class FootballGame {
             ctx.stroke();
         }
         
+        // --- ИГРОКИ ---
         const playersList = Object.values(this.players);
         if (playersList.length > 0) {
             playersList.forEach(player => {
                 if (player.x === undefined || player.y === undefined) return;
-                const px = (player.x / 800) * w;
-                const py = (player.y / 600) * h;
-                const pr = Math.max(12, (player.radius || 14) / 800 * w * 0.9);
+                const px = player.x * scaleX;
+                const py = player.y * scaleY;
+                const pr = Math.max(12, player.radius * scaleX);
+                
                 ctx.shadowColor = 'rgba(0,0,0,0.2)';
                 ctx.shadowBlur = 8;
                 ctx.beginPath();
                 ctx.arc(px + 2, py + 3, pr, 0, Math.PI * 2);
                 ctx.fillStyle = 'rgba(0,0,0,0.15)';
                 ctx.fill();
+                
                 ctx.shadowColor = 'rgba(0,0,0,0.2)';
                 ctx.shadowBlur = 6;
                 const color = player.team === 'team1' ? '#4facfe' : '#f5576c';
@@ -847,20 +882,24 @@ class FootballGame {
                 ctx.arc(px, py, pr, 0, Math.PI * 2);
                 ctx.fillStyle = grad;
                 ctx.fill();
+                
                 ctx.shadowBlur = 0;
                 ctx.strokeStyle = 'rgba(255,255,255,0.2)';
                 ctx.lineWidth = 1.5;
                 ctx.stroke();
+                
                 ctx.fillStyle = 'rgba(255,255,255,0.8)';
                 ctx.font = `${Math.max(9, pr * 0.6)}px Arial`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'bottom';
                 const nameDisplay = (player.name || 'Игрок').length > 8 ? (player.name || 'Игрок').slice(0, 7) + '…' : (player.name || 'Игрок');
                 ctx.fillText(nameDisplay, px, py - pr - 3);
+                
                 ctx.fillStyle = 'rgba(255,255,255,0.9)';
                 ctx.font = `${Math.max(10, pr * 0.6)}px Arial`;
                 ctx.textBaseline = 'middle';
                 ctx.fillText('7', px, py + 1);
+                
                 if (player.hasBall) {
                     ctx.shadowColor = 'rgba(255,215,0,0.4)';
                     ctx.shadowBlur = 15;
