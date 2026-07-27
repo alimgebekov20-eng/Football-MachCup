@@ -16,6 +16,7 @@ class FootballGame {
         this._hasReceivedState = false;
         this._canMove = false;
         this.currentDirection = { x: 0, y: 0 };
+        this._lastSentDirection = { x: 0, y: 0 };
         
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
@@ -482,6 +483,7 @@ class FootballGame {
         this._hasReceivedState = false;
         this._canMove = false;
         this.currentDirection = { x: 0, y: 0 };
+        this._lastSentDirection = { x: 0, y: 0 };
         
         this.team1Name.textContent = this.team === 'team1' ? '👤 Вы' : '👤 Соперник';
         this.team2Name.textContent = this.team === 'team2' ? '👤 Вы' : '👤 Соперник';
@@ -573,13 +575,18 @@ class FootballGame {
         
         this.moveInterval = setInterval(() => {
             if (this.isRunning && this.ws && this.ws.readyState === WebSocket.OPEN && this._canMove) {
-                // Отправляем только если есть движение (не центр)
-                if (this.moveState.x !== 400 || this.moveState.y !== 300) {
+                // Отправляем только если изменилось направление
+                if (this.moveState.x !== this._lastSentDirection.x || 
+                    this.moveState.y !== this._lastSentDirection.y) {
                     this.ws.send(JSON.stringify({
                         type: 'player_movement',
                         x: this.moveState.x,
                         y: this.moveState.y
                     }));
+                    this._lastSentDirection = {
+                        x: this.moveState.x,
+                        y: this.moveState.y
+                    };
                 }
             }
         }, 50);
@@ -635,6 +642,7 @@ class FootballGame {
         this._hasReceivedState = false;
         this._canMove = false;
         this.currentDirection = { x: 0, y: 0 };
+        this._lastSentDirection = { x: 0, y: 0 };
         if (this.moveInterval) {
             clearInterval(this.moveInterval);
             this.moveInterval = null;
@@ -643,7 +651,7 @@ class FootballGame {
         this.showScreen('menuScreen');
     }
     
-    // ===================== D-PAD УПРАВЛЕНИЕ =====================
+    // ===================== D-PAD УПРАВЛЕНИЕ (ПОЛНОСТЬЮ ПЕРЕДЕЛАНО) =====================
     setupDpad() {
         const buttons = document.querySelectorAll('.dpad-btn');
         const dpad = document.getElementById('dpad');
@@ -660,52 +668,97 @@ class FootballGame {
             'down-right': { x: 1, y: 1 }
         };
         
-        const handleStart = (e, btn) => {
-            e.preventDefault();
+        // Обновление направления
+        const updateDirection = (btn) => {
+            if (!btn) {
+                // Если кнопки нет — останавливаемся
+                this.currentDirection = { x: 0, y: 0 };
+                this.sendDirection();
+                return;
+            }
+            
             const dir = btn.dataset.dir;
             const dirData = directions[dir];
-            
-            buttons.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            
-            this.currentDirection = { x: dirData.x, y: dirData.y };
-            this.sendDirection();
+            if (dirData) {
+                this.currentDirection = { x: dirData.x, y: dirData.y };
+                this.sendDirection();
+            }
         };
         
+        // Подсветка кнопки
+        const highlightButton = (btn) => {
+            buttons.forEach(b => b.classList.remove('active'));
+            if (btn) {
+                btn.classList.add('active');
+            }
+        };
+        
+        // Обработка начала касания
+        const handleStart = (e, btn) => {
+            e.preventDefault();
+            highlightButton(btn);
+            updateDirection(btn);
+        };
+        
+        // Обработка окончания касания
         const handleEnd = (e) => {
             e.preventDefault();
-            buttons.forEach(b => b.classList.remove('active'));
-            this.currentDirection = { x: 0, y: 0 };
-            this.sendDirection();
+            highlightButton(null);
+            updateDirection(null);
         };
         
-        // Touch события для каждой кнопки
+        // Назначаем события на каждую кнопку
         buttons.forEach(btn => {
+            // Touch
             btn.addEventListener('touchstart', (e) => handleStart(e, btn), { passive: false });
             btn.addEventListener('touchend', handleEnd, { passive: false });
             btn.addEventListener('touchcancel', handleEnd, { passive: false });
             
+            // Mouse
             btn.addEventListener('mousedown', (e) => handleStart(e, btn));
             btn.addEventListener('mouseup', handleEnd);
             btn.addEventListener('mouseleave', handleEnd);
         });
         
-        // 👇 ГЛАВНОЕ: проводим пальцем по кнопкам
+        // 👇 ГЛАВНОЕ: проводим пальцем по кнопкам (touchmove на всём D-Pad)
+        let lastHighlightedBtn = null;
+        
         dpad.addEventListener('touchmove', (e) => {
             e.preventDefault();
+            
             const touch = e.touches[0];
+            if (!touch) return;
+            
+            // Находим элемент под пальцем
             const element = document.elementFromPoint(touch.clientX, touch.clientY);
             
+            // Если это кнопка D-Pad
             if (element && element.classList.contains('dpad-btn')) {
-                buttons.forEach(b => b.classList.remove('active'));
-                element.classList.add('active');
-                
-                const dir = element.dataset.dir;
-                const dirData = directions[dir];
-                this.currentDirection = { x: dirData.x, y: dirData.y };
-                this.sendDirection();
+                // Если это не та же кнопка, что была
+                if (lastHighlightedBtn !== element) {
+                    lastHighlightedBtn = element;
+                    highlightButton(element);
+                    updateDirection(element);
+                }
+            } else {
+                // Палец вне D-Pad — останавливаемся
+                if (lastHighlightedBtn !== null) {
+                    lastHighlightedBtn = null;
+                    highlightButton(null);
+                    updateDirection(null);
+                }
             }
         }, { passive: false });
+        
+        // Сброс при отпускании вне D-Pad
+        document.addEventListener('touchend', (e) => {
+            const target = e.target;
+            if (!target.closest('.dpad')) {
+                lastHighlightedBtn = null;
+                highlightButton(null);
+                updateDirection(null);
+            }
+        });
     }
     
     sendDirection() {
