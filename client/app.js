@@ -15,12 +15,17 @@ class FootballGame {
         this.isFullscreen = false;
         this._hasReceivedState = false;
         this._canMove = false;
-        this.currentDirection = { x: 0, y: 0 };
-        this._lastSentDirection = { x: 0, y: 0 };
+        
+        // ------------------- НОВАЯ СИСТЕМА ДВИЖЕНИЯ -------------------
+        this._currentDir = { x: 0, y: 0 };        // текущее направление (что сейчас нажато)
+        this._lastSentDir = { x: 0, y: 0 };       // последнее отправленное направление
+        this._targetPos = { x: 400, y: 300 };     // целевая позиция для отправки
+        // --------------------------------------------------------------
         
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
         
+        // ... все остальные DOM-ссылки (оставляем как было) ...
         this.loginScreen = document.getElementById('loginScreen');
         this.menuScreen = document.getElementById('menuScreen');
         this.createLobbyScreen = document.getElementById('createLobbyScreen');
@@ -68,7 +73,6 @@ class FootballGame {
         this.finalTeam2 = document.getElementById('finalTeam2');
         this.winnerMessage = document.getElementById('winnerMessage');
         
-        this.moveState = { x: 0, y: 0 };
         this.moveInterval = null;
         
         this.setupEventListeners();
@@ -78,113 +82,7 @@ class FootballGame {
         this.gameLoop();
     }
     
-    setupFullscreen() {
-        window.addEventListener('orientationchange', () => {
-            setTimeout(() => {
-                this.handleOrientationChange();
-            }, 500);
-        });
-        
-        this.canvas.addEventListener('click', () => {
-            this.toggleFullscreen();
-        });
-        this.canvas.addEventListener('touchend', (e) => {
-            const target = e.target;
-            if (target.id === 'dpad' || target.closest('.dpad') || 
-                target.classList.contains('action-btn')) {
-                return;
-            }
-            this.toggleFullscreen();
-        });
-    }
-    
-    handleOrientationChange() {
-        if (window.innerHeight < window.innerWidth) {
-            this.enterFullscreen();
-        } else {
-            this.exitFullscreen();
-        }
-        this.resizeCanvas();
-    }
-    
-    toggleFullscreen() {
-        if (this.isFullscreen) {
-            this.exitFullscreen();
-        } else {
-            this.enterFullscreen();
-        }
-    }
-    
-    enterFullscreen() {
-        const el = document.documentElement;
-        if (el.requestFullscreen) {
-            el.requestFullscreen().catch(() => {});
-        } else if (el.webkitRequestFullscreen) {
-            el.webkitRequestFullscreen();
-        } else if (el.msRequestFullscreen) {
-            el.msRequestFullscreen();
-        }
-        this.isFullscreen = true;
-        
-        if (screen.orientation && screen.orientation.lock) {
-            screen.orientation.lock('landscape').catch(() => {});
-        }
-    }
-    
-    exitFullscreen() {
-        if (document.exitFullscreen) {
-            document.exitFullscreen().catch(() => {});
-        } else if (document.webkitExitFullscreen) {
-            document.webkitExitFullscreen();
-        } else if (document.msExitFullscreen) {
-            document.msExitFullscreen();
-        }
-        this.isFullscreen = false;
-        
-        if (screen.orientation && screen.orientation.unlock) {
-            screen.orientation.unlock();
-        }
-    }
-    
-    setupEventListeners() {
-        this.enterBtn.addEventListener('click', () => this.handleLogin());
-        this.playerNameInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') this.handleLogin();
-        });
-        
-        this.createLobbyBtn.addEventListener('click', () => this.showScreen('createLobbyScreen'));
-        this.findLobbyBtn.addEventListener('click', () => this.handleFindLobbies());
-        
-        this.mode1v1Btn.addEventListener('click', () => this.handleCreateLobby('1v1'));
-        this.mode2v2Btn.addEventListener('click', () => this.handleCreateLobby('2v2'));
-        this.backFromCreateBtn.addEventListener('click', () => this.showScreen('menuScreen'));
-        
-        this.copyCodeBtn.addEventListener('click', () => this.handleCopyCode());
-        this.startGameBtn.addEventListener('click', () => this.handleStartGame());
-        this.leaveLobbyBtn.addEventListener('click', () => this.handleLeaveLobby());
-        
-        this.refreshLobbiesBtn.addEventListener('click', () => this.handleFindLobbies());
-        this.backFromFindBtn.addEventListener('click', () => this.showScreen('menuScreen'));
-        
-        this.kickBtn.addEventListener('click', () => this.handleKick());
-        this.kickBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            this.handleKick();
-        });
-        
-        this.tackleBtn.addEventListener('click', () => this.handleTackle());
-        this.tackleBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            this.handleTackle();
-        });
-        
-        this.backToMenuBtn.addEventListener('click', () => this.handleBackToMenu());
-        
-        window.addEventListener('resize', () => this.resizeCanvas());
-        window.addEventListener('orientationchange', () => {
-            setTimeout(() => this.resizeCanvas(), 300);
-        });
-    }
+    // ===================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====================
     
     showScreen(screenId) {
         const screens = ['loginScreen', 'menuScreen', 'createLobbyScreen', 'lobbyScreen', 'findLobbyScreen', 'gameScreen'];
@@ -198,6 +96,8 @@ class FootballGame {
         });
     }
     
+    // ===================== АВТОРИЗАЦИЯ =====================
+    
     handleLogin() {
         const name = this.playerNameInput.value.trim();
         if (!name) {
@@ -209,7 +109,6 @@ class FootballGame {
             }, 2000);
             return;
         }
-        
         this.playerName = name;
         this.connectWebSocket();
     }
@@ -218,7 +117,6 @@ class FootballGame {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const host = window.location.host;
         const wsUrl = `${protocol}//${host}/ws`;
-        
         this.ws = new WebSocket(wsUrl);
         
         this.ws.onopen = () => {
@@ -254,7 +152,6 @@ class FootballGame {
     
     handleWebSocketMessage(data) {
         console.log('📨 Получено:', data.type);
-        
         switch (data.type) {
             case 'auth_success':
                 this.playerId = data.playerId;
@@ -262,11 +159,9 @@ class FootballGame {
                 this.displayId.textContent = `ID: ${data.playerId.slice(0, 8)}`;
                 this.showScreen('menuScreen');
                 break;
-                
             case 'auth_error':
                 alert(data.message);
                 break;
-                
             case 'lobby_created':
                 this.lobbyId = data.lobbyId;
                 this.isHost = true;
@@ -274,7 +169,6 @@ class FootballGame {
                 this.updateLobbyUI(data);
                 this.showScreen('lobbyScreen');
                 break;
-                
             case 'lobby_joined':
                 this.lobbyId = data.lobbyId;
                 this.team = data.team;
@@ -282,11 +176,9 @@ class FootballGame {
                 this.updateLobbyUI(data);
                 this.showScreen('lobbyScreen');
                 break;
-                
             case 'lobby_update':
                 this.updateLobbyUI(data);
                 break;
-                
             case 'new_host':
                 this.isHost = data.isHost;
                 if (this.isHost) {
@@ -294,45 +186,40 @@ class FootballGame {
                     this.lobbyStatus.className = 'lobby-status ready';
                 }
                 break;
-                
             case 'left_lobby':
                 this.lobbyId = null;
                 this.isHost = false;
                 this.showScreen('menuScreen');
                 break;
-                
             case 'lobbies_list':
                 this.renderLobbies(data.lobbies);
                 break;
-                
             case 'game_started':
                 console.log('🎮 СТАРТ ИГРЫ!', data);
                 this.gameId = data.gameId;
                 this.team = data.team;
                 this.startGame(data);
                 break;
-                
             case 'game_state':
                 console.log('📊 СОСТОЯНИЕ ИГРЫ:', data.state);
                 this._hasReceivedState = true;
                 this.updateGameState(data.state);
                 break;
-                
             case 'error':
                 alert(data.message);
                 break;
-                
             default:
                 console.log('Неизвестное сообщение:', data);
         }
     }
+    
+    // ===================== ЛОББИ =====================
     
     handleCreateLobby(mode) {
         if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
             alert('Нет соединения с сервером');
             return;
         }
-        
         this.ws.send(JSON.stringify({
             type: 'create_lobby',
             mode: mode
@@ -344,10 +231,8 @@ class FootballGame {
             alert('Нет соединения с сервером');
             return;
         }
-        
         this.lobbiesList.innerHTML = '<div class="loading-text">⏳ Загрузка...</div>';
         this.showScreen('findLobbyScreen');
-        
         this.ws.send(JSON.stringify({
             type: 'get_lobbies'
         }));
@@ -358,24 +243,20 @@ class FootballGame {
             this.lobbiesList.innerHTML = '<div class="loading-text">😕 Нет доступных лобби</div>';
             return;
         }
-        
         this.lobbiesList.innerHTML = '';
         lobbies.forEach(lobby => {
             const item = document.createElement('div');
             item.className = 'lobby-item';
-            
             const info = document.createElement('div');
             info.className = 'lobby-info-text';
             info.innerHTML = `
                 <span class="lobby-id-text">🏠 ${lobby.id}</span>
                 <span class="lobby-details-text">${lobby.currentPlayers}/${lobby.maxPlayers} игроков • ${lobby.maxPlayers === 2 ? '1v1' : '2v2'}</span>
             `;
-            
             const joinBtn = document.createElement('button');
             joinBtn.className = 'lobby-join-btn';
             joinBtn.textContent = 'Присоединиться';
             joinBtn.addEventListener('click', () => this.handleJoinLobby(lobby.id));
-            
             item.appendChild(info);
             item.appendChild(joinBtn);
             this.lobbiesList.appendChild(item);
@@ -387,7 +268,6 @@ class FootballGame {
             alert('Нет соединения с сервером');
             return;
         }
-        
         this.ws.send(JSON.stringify({
             type: 'join_lobby',
             lobbyId: lobbyId
@@ -407,9 +287,7 @@ class FootballGame {
                 `;
                 this.playersList.appendChild(item);
             });
-            
             this.lobbyPlayers.textContent = `Игроков: ${data.players.length}/${data.maxPlayers || 4}`;
-            
             if (this.isHost) {
                 const canStart = data.players && data.players.length >= 2;
                 this.startGameBtn.disabled = !canStart;
@@ -434,12 +312,10 @@ class FootballGame {
             alert('Только хост может начать игру');
             return;
         }
-        
         if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
             alert('Нет соединения с сервером');
             return;
         }
-        
         this.ws.send(JSON.stringify({
             type: 'start_game'
         }));
@@ -447,7 +323,6 @@ class FootballGame {
     
     handleLeaveLobby() {
         if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
-        
         if (confirm('Выйти из лобби?')) {
             this.ws.send(JSON.stringify({
                 type: 'leave_lobby'
@@ -476,14 +351,19 @@ class FootballGame {
         });
     }
     
+    // ===================== ИГРА =====================
+    
     startGame(data) {
         this.isRunning = true;
         this.timer = data.duration || 120;
         this.team = data.team;
         this._hasReceivedState = false;
         this._canMove = false;
-        this.currentDirection = { x: 0, y: 0 };
-        this._lastSentDirection = { x: 0, y: 0 };
+        
+        // СБРАСЫВАЕМ ВСЁ ДВИЖЕНИЕ
+        this._currentDir = { x: 0, y: 0 };
+        this._lastSentDir = { x: 0, y: 0 };
+        this._targetPos = { x: 400, y: 300 };
         
         this.team1Name.textContent = this.team === 'team1' ? '👤 Вы' : '👤 Соперник';
         this.team2Name.textContent = this.team === 'team2' ? '👤 Вы' : '👤 Соперник';
@@ -492,6 +372,7 @@ class FootballGame {
         this.resizeCanvas();
         this.gameOverModal.classList.remove('active');
         
+        // Обратный отсчёт
         let countdown = 5;
         this.timerElement.textContent = '⚡' + countdown;
         this.timerElement.style.color = '#ffd700';
@@ -501,11 +382,6 @@ class FootballGame {
         this.tackleBtn.disabled = true;
         this.kickBtn.style.opacity = '0.5';
         this.tackleBtn.style.opacity = '0.5';
-        
-        this.moveState = {
-            x: 400,
-            y: 300
-        };
         
         const countdownInterval = setInterval(() => {
             countdown--;
@@ -521,13 +397,11 @@ class FootballGame {
                 this.timerElement.textContent = this.timer;
                 this.timerElement.style.color = '#f5576c';
                 this.timerElement.style.fontSize = '1.8rem';
-                
                 this._canMove = true;
                 this.kickBtn.disabled = false;
                 this.tackleBtn.disabled = false;
                 this.kickBtn.style.opacity = '1';
                 this.tackleBtn.style.opacity = '1';
-                
                 console.log('🚀 МАТЧ НАЧАЛСЯ!');
             }
         }, 1000);
@@ -572,50 +446,51 @@ class FootballGame {
         if (this.moveInterval) {
             clearInterval(this.moveInterval);
         }
-        
         this.moveInterval = setInterval(() => {
-            if (this.isRunning && this.ws && this.ws.readyState === WebSocket.OPEN && this._canMove) {
-                // Отправляем только если изменилось направление
-                if (this.moveState.x !== this._lastSentDirection.x || 
-                    this.moveState.y !== this._lastSentDirection.y) {
-                    this.ws.send(JSON.stringify({
-                        type: 'player_movement',
-                        x: this.moveState.x,
-                        y: this.moveState.y
-                    }));
-                    this._lastSentDirection = {
-                        x: this.moveState.x,
-                        y: this.moveState.y
-                    };
-                }
+            if (!this.isRunning || !this.ws || this.ws.readyState !== WebSocket.OPEN || !this._canMove) {
+                return;
+            }
+            
+            // Отправляем ТОЛЬКО если направление изменилось
+            if (this._currentDir.x !== this._lastSentDir.x || this._currentDir.y !== this._lastSentDir.y) {
+                // Вычисляем целевую позицию
+                const offset = 200;
+                const margin = 35;
+                let targetX = 400 + this._currentDir.x * offset;
+                let targetY = 300 + this._currentDir.y * offset;
+                targetX = Math.round(Math.max(margin, Math.min(800 - margin, targetX)));
+                targetY = Math.round(Math.max(margin, Math.min(600 - margin, targetY)));
+                
+                this._targetPos = { x: targetX, y: targetY };
+                this._lastSentDir = { ...this._currentDir };
+                
+                // Отправляем
+                this.ws.send(JSON.stringify({
+                    type: 'player_movement',
+                    x: targetX,
+                    y: targetY
+                }));
+                console.log(`📤 ДВИЖЕНИЕ: (${targetX}, ${targetY})`);
             }
         }, 50);
     }
     
     updateGameState(state) {
         if (!state) return;
-        
         this._hasReceivedState = true;
-        
         if (state.players && state.players.length > 0) {
             this.players = {};
             state.players.forEach(player => {
                 this.players[player.id] = player;
             });
-            console.log(`✅ Загружено ${Object.keys(this.players).length} игроков`);
-        } else {
-            console.warn('⚠️ В состоянии нет игроков!');
         }
-        
         this.ball = state.ball || { x: 400, y: 300, radius: 10 };
         this.score = state.score || { team1: 0, team2: 0 };
         this.timer = state.timer || 0;
         this.isRunning = state.isRunning || false;
-        
         this.team1Score.textContent = this.score.team1;
         this.team2Score.textContent = this.score.team2;
         this.timerElement.textContent = this.timer;
-        
         if (this.timer <= 0 && this.isRunning) {
             this.isRunning = false;
             this.showGameOver();
@@ -625,7 +500,6 @@ class FootballGame {
     showGameOver() {
         this.finalTeam1.textContent = this.score.team1;
         this.finalTeam2.textContent = this.score.team2;
-        
         if (this.score.team1 > this.score.team2) {
             this.winnerMessage.textContent = '🏆 Победа команды 1!';
         } else if (this.score.team2 > this.score.team1) {
@@ -633,7 +507,6 @@ class FootballGame {
         } else {
             this.winnerMessage.textContent = '🤝 Ничья!';
         }
-        
         this.gameOverModal.classList.add('active');
     }
     
@@ -641,8 +514,8 @@ class FootballGame {
         this.isRunning = false;
         this._hasReceivedState = false;
         this._canMove = false;
-        this.currentDirection = { x: 0, y: 0 };
-        this._lastSentDirection = { x: 0, y: 0 };
+        this._currentDir = { x: 0, y: 0 };
+        this._lastSentDir = { x: 0, y: 0 };
         if (this.moveInterval) {
             clearInterval(this.moveInterval);
             this.moveInterval = null;
@@ -651,7 +524,8 @@ class FootballGame {
         this.showScreen('menuScreen');
     }
     
-    // ===================== D-PAD УПРАВЛЕНИЕ (ПОЛНОСТЬЮ ПЕРЕДЕЛАНО) =====================
+    // ===================== D-PAD УПРАВЛЕНИЕ (ПРОСТОЕ И ПОНЯТНОЕ) =====================
+    
     setupDpad() {
         const buttons = document.querySelectorAll('.dpad-btn');
         const dpad = document.getElementById('dpad');
@@ -668,127 +542,93 @@ class FootballGame {
             'down-right': { x: 1, y: 1 }
         };
         
-        // Обновление направления
-        const updateDirection = (btn) => {
-            if (!btn) {
-                // Если кнопки нет — останавливаемся
-                this.currentDirection = { x: 0, y: 0 };
-                this.sendDirection();
-                return;
-            }
-            
-            const dir = btn.dataset.dir;
-            const dirData = directions[dir];
-            if (dirData) {
-                this.currentDirection = { x: dirData.x, y: dirData.y };
-                this.sendDirection();
-            }
+        const setDirection = (dir) => {
+            this._currentDir = { x: dir.x, y: dir.y };
+            console.log(`🕹️ НАПРАВЛЕНИЕ: (${dir.x}, ${dir.y})`);
         };
         
-        // Подсветка кнопки
-        const highlightButton = (btn) => {
+        const stopMoving = () => {
+            this._currentDir = { x: 0, y: 0 };
+            console.log('🛑 ОСТАНОВКА');
+        };
+        
+        const highlightBtn = (btn) => {
             buttons.forEach(b => b.classList.remove('active'));
-            if (btn) {
-                btn.classList.add('active');
-            }
+            if (btn) btn.classList.add('active');
         };
         
-        // Обработка начала касания
         const handleStart = (e, btn) => {
             e.preventDefault();
-            highlightButton(btn);
-            updateDirection(btn);
+            const dir = directions[btn.dataset.dir];
+            if (dir) {
+                highlightBtn(btn);
+                setDirection(dir);
+            }
         };
         
-        // Обработка окончания касания
         const handleEnd = (e) => {
             e.preventDefault();
-            highlightButton(null);
-            updateDirection(null);
+            highlightBtn(null);
+            stopMoving();
         };
         
-        // Назначаем события на каждую кнопку
+        // События на кнопках
         buttons.forEach(btn => {
-            // Touch
             btn.addEventListener('touchstart', (e) => handleStart(e, btn), { passive: false });
             btn.addEventListener('touchend', handleEnd, { passive: false });
             btn.addEventListener('touchcancel', handleEnd, { passive: false });
-            
-            // Mouse
             btn.addEventListener('mousedown', (e) => handleStart(e, btn));
             btn.addEventListener('mouseup', handleEnd);
             btn.addEventListener('mouseleave', handleEnd);
         });
         
-        // 👇 ГЛАВНОЕ: проводим пальцем по кнопкам (touchmove на всём D-Pad)
-        let lastHighlightedBtn = null;
+        // 👇 ПРОВЕДЕНИЕ ПАЛЬЦЕМ
+        let currentHighlight = null;
         
         dpad.addEventListener('touchmove', (e) => {
             e.preventDefault();
-            
             const touch = e.touches[0];
             if (!touch) return;
             
-            // Находим элемент под пальцем
             const element = document.elementFromPoint(touch.clientX, touch.clientY);
             
-            // Если это кнопка D-Pad
             if (element && element.classList.contains('dpad-btn')) {
-                // Если это не та же кнопка, что была
-                if (lastHighlightedBtn !== element) {
-                    lastHighlightedBtn = element;
-                    highlightButton(element);
-                    updateDirection(element);
+                if (currentHighlight !== element) {
+                    currentHighlight = element;
+                    const dir = directions[element.dataset.dir];
+                    if (dir) {
+                        highlightBtn(element);
+                        setDirection(dir);
+                    }
                 }
             } else {
-                // Палец вне D-Pad — останавливаемся
-                if (lastHighlightedBtn !== null) {
-                    lastHighlightedBtn = null;
-                    highlightButton(null);
-                    updateDirection(null);
+                if (currentHighlight !== null) {
+                    currentHighlight = null;
+                    highlightBtn(null);
+                    stopMoving();
                 }
             }
         }, { passive: false });
         
-        // Сброс при отпускании вне D-Pad
+        // Если палец ушёл за пределы D-Pad
         document.addEventListener('touchend', (e) => {
             const target = e.target;
             if (!target.closest('.dpad')) {
-                lastHighlightedBtn = null;
-                highlightButton(null);
-                updateDirection(null);
+                currentHighlight = null;
+                highlightBtn(null);
+                stopMoving();
             }
         });
     }
     
-    sendDirection() {
-        const dir = this.currentDirection;
-        const fieldWidth = 800;
-        const fieldHeight = 600;
-        const margin = 35;
-        const offset = 200;
-        
-        let targetX = 400 + dir.x * offset;
-        let targetY = 300 + dir.y * offset;
-        
-        targetX = Math.round(Math.max(margin, Math.min(fieldWidth - margin, targetX)));
-        targetY = Math.round(Math.max(margin, Math.min(fieldHeight - margin, targetY)));
-        
-        this.moveState = {
-            x: targetX,
-            y: targetY
-        };
-    }
-    // =============================================================
+    // ===================== ДЕЙСТВИЯ =====================
     
     handleKick() {
         if (!this.isRunning || !this.ws || this.ws.readyState !== WebSocket.OPEN) return;
-        
         this.ws.send(JSON.stringify({
             type: 'game_action',
             action: 'kick'
         }));
-        
         this.kickBtn.style.transform = 'scale(0.8)';
         setTimeout(() => {
             this.kickBtn.style.transform = 'scale(1)';
@@ -797,29 +637,24 @@ class FootballGame {
     
     handleTackle() {
         if (!this.isRunning || !this.ws || this.ws.readyState !== WebSocket.OPEN) return;
-        
         this.ws.send(JSON.stringify({
             type: 'game_action',
             action: 'tackle'
         }));
-        
         this.tackleBtn.style.transform = 'scale(0.8)';
         setTimeout(() => {
             this.tackleBtn.style.transform = 'scale(1)';
         }, 150);
     }
     
+    // ===================== CANVAS =====================
+    
     resizeCanvas() {
         if (!this.canvas) return;
-        
         const headerHeight = document.querySelector('.game-header')?.offsetHeight || 50;
         const controlsHeight = 220;
-        
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight - headerHeight - controlsHeight;
-        
-        this.fieldWidth = this.canvas.width;
-        this.fieldHeight = this.canvas.height;
     }
     
     gameLoop() {
@@ -831,11 +666,11 @@ class FootballGame {
         const ctx = this.ctx;
         const w = this.canvas.width;
         const h = this.canvas.height;
-        
         if (!w || !h) return;
         
         ctx.clearRect(0, 0, w, h);
         
+        // Поле
         const gradient = ctx.createLinearGradient(0, 0, 0, h);
         gradient.addColorStop(0, '#2d8a4e');
         gradient.addColorStop(0.5, '#3ca55c');
@@ -843,6 +678,7 @@ class FootballGame {
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, w, h);
         
+        // Полосы
         ctx.strokeStyle = 'rgba(255,255,255,0.08)';
         ctx.lineWidth = 1;
         for (let i = 0; i < h; i += 40) {
@@ -852,23 +688,22 @@ class FootballGame {
             ctx.stroke();
         }
         
+        // Разметка
         ctx.strokeStyle = 'rgba(255,255,255,0.4)';
         ctx.lineWidth = 2;
-        
         ctx.beginPath();
         ctx.moveTo(w/2, 20);
         ctx.lineTo(w/2, h-20);
         ctx.stroke();
-        
         ctx.beginPath();
         ctx.arc(w/2, h/2, Math.min(w, h) * 0.08, 0, Math.PI * 2);
         ctx.stroke();
-        
         ctx.beginPath();
         ctx.arc(w/2, h/2, 4, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(255,255,255,0.4)';
         ctx.fill();
         
+        // Ворота
         const goalWidth = 50;
         const goalHeight = h * 0.2;
         const goalY = h/2 - goalHeight/2;
@@ -931,18 +766,17 @@ class FootballGame {
         ctx.strokeRect(0, penaltyY, penaltyWidth, penaltyHeight);
         ctx.strokeRect(w - penaltyWidth, penaltyY, penaltyWidth, penaltyHeight);
         
+        // Мяч
         if (this.ball && this.ball.x !== undefined) {
             const bx = (this.ball.x / 800) * w;
             const by = (this.ball.y / 600) * h;
             const br = Math.max(6, (this.ball.radius || 10) / 800 * w * 1.2);
-            
             ctx.shadowColor = 'rgba(255,255,255,0.3)';
             ctx.shadowBlur = 10;
             ctx.beginPath();
             ctx.arc(bx + 2, by + 2, br, 0, Math.PI * 2);
             ctx.fillStyle = 'rgba(0,0,0,0.2)';
             ctx.fill();
-            
             ctx.shadowColor = 'rgba(255,255,255,0.2)';
             ctx.shadowBlur = 8;
             ctx.beginPath();
@@ -954,7 +788,6 @@ class FootballGame {
             ctx.fillStyle = ballGrad;
             ctx.fill();
             ctx.shadowBlur = 0;
-            
             ctx.strokeStyle = 'rgba(100,100,100,0.3)';
             ctx.lineWidth = 0.5;
             ctx.beginPath();
@@ -970,22 +803,20 @@ class FootballGame {
             ctx.stroke();
         }
         
+        // Игроки
         const playersList = Object.values(this.players);
         if (playersList.length > 0) {
             playersList.forEach(player => {
                 if (player.x === undefined || player.y === undefined) return;
-                
                 const px = (player.x / 800) * w;
                 const py = (player.y / 600) * h;
                 const pr = Math.max(12, (player.radius || 14) / 800 * w * 0.9);
-                
                 ctx.shadowColor = 'rgba(0,0,0,0.2)';
                 ctx.shadowBlur = 8;
                 ctx.beginPath();
                 ctx.arc(px + 2, py + 3, pr, 0, Math.PI * 2);
                 ctx.fillStyle = 'rgba(0,0,0,0.15)';
                 ctx.fill();
-                
                 ctx.shadowColor = 'rgba(0,0,0,0.2)';
                 ctx.shadowBlur = 6;
                 const color = player.team === 'team1' ? '#4facfe' : '#f5576c';
@@ -997,24 +828,20 @@ class FootballGame {
                 ctx.arc(px, py, pr, 0, Math.PI * 2);
                 ctx.fillStyle = grad;
                 ctx.fill();
-                
                 ctx.shadowBlur = 0;
                 ctx.strokeStyle = 'rgba(255,255,255,0.2)';
                 ctx.lineWidth = 1.5;
                 ctx.stroke();
-                
                 ctx.fillStyle = 'rgba(255,255,255,0.8)';
                 ctx.font = `${Math.max(9, pr * 0.6)}px Arial`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'bottom';
                 const nameDisplay = (player.name || 'Игрок').length > 8 ? (player.name || 'Игрок').slice(0, 7) + '…' : (player.name || 'Игрок');
                 ctx.fillText(nameDisplay, px, py - pr - 3);
-                
                 ctx.fillStyle = 'rgba(255,255,255,0.9)';
                 ctx.font = `${Math.max(10, pr * 0.6)}px Arial`;
                 ctx.textBaseline = 'middle';
                 ctx.fillText('7', px, py + 1);
-                
                 if (player.hasBall) {
                     ctx.shadowColor = 'rgba(255,215,0,0.4)';
                     ctx.shadowBlur = 15;
@@ -1033,6 +860,104 @@ class FootballGame {
             ctx.textBaseline = 'middle';
             ctx.fillText('⏳ Ожидание игроков...', w/2, h/2);
         }
+    }
+    
+    // ===================== FULLSCREEN =====================
+    
+    setupFullscreen() {
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => {
+                this.handleOrientationChange();
+            }, 500);
+        });
+        this.canvas.addEventListener('click', () => {
+            this.toggleFullscreen();
+        });
+        this.canvas.addEventListener('touchend', (e) => {
+            const target = e.target;
+            if (target.id === 'dpad' || target.closest('.dpad') || target.classList.contains('action-btn')) {
+                return;
+            }
+            this.toggleFullscreen();
+        });
+    }
+    
+    handleOrientationChange() {
+        if (window.innerHeight < window.innerWidth) {
+            this.enterFullscreen();
+        } else {
+            this.exitFullscreen();
+        }
+        this.resizeCanvas();
+    }
+    
+    toggleFullscreen() {
+        if (this.isFullscreen) {
+            this.exitFullscreen();
+        } else {
+            this.enterFullscreen();
+        }
+    }
+    
+    enterFullscreen() {
+        const el = document.documentElement;
+        if (el.requestFullscreen) {
+            el.requestFullscreen().catch(() => {});
+        } else if (el.webkitRequestFullscreen) {
+            el.webkitRequestFullscreen();
+        } else if (el.msRequestFullscreen) {
+            el.msRequestFullscreen();
+        }
+        this.isFullscreen = true;
+        if (screen.orientation && screen.orientation.lock) {
+            screen.orientation.lock('landscape').catch(() => {});
+        }
+    }
+    
+    exitFullscreen() {
+        if (document.exitFullscreen) {
+            document.exitFullscreen().catch(() => {});
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+        }
+        this.isFullscreen = false;
+        if (screen.orientation && screen.orientation.unlock) {
+            screen.orientation.unlock();
+        }
+    }
+    
+    setupEventListeners() {
+        this.enterBtn.addEventListener('click', () => this.handleLogin());
+        this.playerNameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.handleLogin();
+        });
+        this.createLobbyBtn.addEventListener('click', () => this.showScreen('createLobbyScreen'));
+        this.findLobbyBtn.addEventListener('click', () => this.handleFindLobbies());
+        this.mode1v1Btn.addEventListener('click', () => this.handleCreateLobby('1v1'));
+        this.mode2v2Btn.addEventListener('click', () => this.handleCreateLobby('2v2'));
+        this.backFromCreateBtn.addEventListener('click', () => this.showScreen('menuScreen'));
+        this.copyCodeBtn.addEventListener('click', () => this.handleCopyCode());
+        this.startGameBtn.addEventListener('click', () => this.handleStartGame());
+        this.leaveLobbyBtn.addEventListener('click', () => this.handleLeaveLobby());
+        this.refreshLobbiesBtn.addEventListener('click', () => this.handleFindLobbies());
+        this.backFromFindBtn.addEventListener('click', () => this.showScreen('menuScreen'));
+        this.kickBtn.addEventListener('click', () => this.handleKick());
+        this.kickBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.handleKick();
+        });
+        this.tackleBtn.addEventListener('click', () => this.handleTackle());
+        this.tackleBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.handleTackle();
+        });
+        this.backToMenuBtn.addEventListener('click', () => this.handleBackToMenu());
+        window.addEventListener('resize', () => this.resizeCanvas());
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => this.resizeCanvas(), 300);
+        });
     }
 }
 
