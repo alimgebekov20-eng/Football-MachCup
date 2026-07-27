@@ -193,7 +193,8 @@ class GameLogic {
     const player = this.players.get(playerId);
     if (!player || !this.isRunning) return;
     
-    const margin = 25;
+    // Уменьшаем margin до 5, чтобы игрок мог подходить к воротам
+    const margin = 5;
     const targetX = Math.max(margin, Math.min(this.field.width - margin, x));
     const targetY = Math.max(margin, Math.min(this.field.height - margin, y));
     
@@ -203,6 +204,18 @@ class GameLogic {
     if (x > player.x) player.direction = 1;
     else if (x < player.x) player.direction = -1;
   }
+
+  // ========== НОВЫЙ МЕТОД ДЛЯ ОСТАНОВКИ ==========
+  stopPlayer(playerId) {
+    const player = this.players.get(playerId);
+    if (!player) return;
+    
+    // Останавливаем — target = текущая позиция
+    player.targetX = player.x;
+    player.targetY = player.y;
+    console.log(`🛑 ${player.name} остановлен по команде`);
+  }
+  // ===============================================
 
   checkGoal() {
     const bx = this.ball.x;
