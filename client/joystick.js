@@ -5,7 +5,7 @@ class VirtualJoystick {
         
         this.options = {
             maxDistance: this.container.offsetWidth / 2 - this.thumb.offsetWidth / 2 - 10,
-            deadZone: 0.15,
+            deadZone: 0.2, // 👈 УВЕЛИЧИЛ ДО 20%
             ...options
         };
         
@@ -13,7 +13,7 @@ class VirtualJoystick {
         this.x = 0;
         this.y = 0;
         this.callbacks = [];
-        this.isTouching = false;
+        this._isTouching = false;
         
         this.setupEvents();
         this.resetThumb();
@@ -23,7 +23,7 @@ class VirtualJoystick {
         // Touch events
         this.container.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            this.isTouching = true;
+            this._isTouching = true;
             this.active = true;
             const pos = this.getPosition(e);
             this.update(pos.x, pos.y);
@@ -38,14 +38,14 @@ class VirtualJoystick {
         
         this.container.addEventListener('touchend', (e) => {
             e.preventDefault();
-            this.isTouching = false;
+            this._isTouching = false;
             this.active = false;
-            this.reset();
+            this.reset(); // 👈 ГЛАВНОЕ: сбрасываем в 0
         }, { passive: false });
         
         this.container.addEventListener('touchcancel', (e) => {
             e.preventDefault();
-            this.isTouching = false;
+            this._isTouching = false;
             this.active = false;
             this.reset();
         }, { passive: false });
@@ -66,7 +66,7 @@ class VirtualJoystick {
         window.addEventListener('mouseup', () => {
             if (!this.active) return;
             this.active = false;
-            this.reset();
+            this.reset(); // 👈 Сбрасываем в 0
         });
     }
     
@@ -104,7 +104,7 @@ class VirtualJoystick {
             normY = dy / distance;
         }
         
-        // Dead zone
+        // 👈 DEAD ZONE: если слишком маленькое движение — обнуляем
         const dist = Math.hypot(normX, normY);
         if (dist < this.options.deadZone) {
             this.x = 0;
@@ -119,8 +119,10 @@ class VirtualJoystick {
     }
     
     reset() {
+        // 👈 ГЛАВНОЕ: ПРИНУДИТЕЛЬНО СБРАСЫВАЕМ ВСЁ В 0
         this.x = 0;
         this.y = 0;
+        this.active = false;
         this.resetThumb();
         this.triggerCallbacks();
     }
