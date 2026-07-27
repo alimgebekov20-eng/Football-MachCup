@@ -14,7 +14,7 @@ class FootballGame {
         this.score = { team1: 0, team2: 0 };
         this.isFullscreen = false;
         this._hasReceivedState = false;
-        this._isStopped = false; // 👈 НОВАЯ ПЕРЕМЕННАЯ
+        this._isStopped = false;
         
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
@@ -66,12 +66,14 @@ class FootballGame {
         this.finalTeam2 = document.getElementById('finalTeam2');
         this.winnerMessage = document.getElementById('winnerMessage');
         
+        // ========== ПЕРЕМЕННЫЕ ДЛЯ ДЖОСТИКА ==========
         this._moveX = 400;
         this._moveY = 300;
+        this._joystickActive = false;
         
         this.setupEventListeners();
         this.setupFullscreen();
-        this.setupDpad();
+        this.setupJoystick();
         this.resizeCanvas();
         this.gameLoop();
         
@@ -80,7 +82,6 @@ class FootballGame {
     
     sendMove() {
         if (!this.isRunning || !this.ws || this.ws.readyState !== WebSocket.OPEN) return;
-        // ✅ НЕ ОТПРАВЛЯЕМ, ЕСЛИ ОСТАНОВЛЕНЫ
         if (this._isStopped) return;
         if (this._moveX !== 400 || this._moveY !== 300) {
             this.ws.send(JSON.stringify({
@@ -91,115 +92,160 @@ class FootballGame {
         }
     }
     
-    setupDpad() {
-        const buttons = document.querySelectorAll('.dpad-btn');
-        const dpad = document.getElementById('dpad');
+    // ===================== ВИРТУАЛЬНЫЙ ДЖОСТИК =====================
+    setupJoystick() {
+        const base = document.getElementById('joystickBase');
+        const thumb = document.getElementById('joystickThumb');
         
-        const directions = {
-            'up-left': { x: -1, y: -1 },
-            'up': { x: 0, y: -1 },
-            'up-right': { x: 1, y: -1 },
-            'left': { x: -1, y: 0 },
-            'center': { x: 0, y: 0 },
-            'right': { x: 1, y: 0 },
-            'down-left': { x: -1, y: 1 },
-            'down': { x: 0, y: 1 },
-            'down-right': { x: 1, y: 1 }
+        // Размеры
+        const baseSize = base.offsetWidth;
+        const thumbSize = thumb.offsetWidth;
+        const maxDist = (baseSize - thumbSize) / 2 - 5;
+        
+        let active = false;
+        
+        // Получить позицию пальца/мыши
+        const getPosition = (e) => {
+            const rect = base.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            let clientX, clientY;
+            if (e.touches) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+            
+            return {
+                x: clientX - centerX,
+                y: clientY - centerY
+            };
         };
         
-        const setDirection = (dir) => {
-            if (!dir) {
-                // ✅ МГНОВЕННАЯ ОСТАНОВКА
+        // Обновить джостик
+        const updateJoystick = (dx, dy) => {
+            const distance = Math.hypot(dx, dy);
+            let normX = dx;
+            let normY = dy;
+            
+            if (distance > maxDist) {
+                normX = (dx / distance) * maxDist;
+                normY = (dy / distance) * maxDist;
+            }
+            
+            // Обновляем позицию thumb
+            const percentX = (normX / maxDist) * 100;
+            const percentY = (normY / maxDist) * 100;
+            thumb.style.transform = `translate(calc(-50% + ${percentX}%), calc(-50% + ${percentY}%))`;
+            
+            // Отправляем направление
+            const dirX = normX / maxDist;
+            const dirY = normY / maxDist;
+            
+            // Мертвая зона 15%
+            const deadZone = 0.15;
+            let moveX = 0;
+            let moveY = 0;
+            
+            if (Math.abs(dirX) > deadZone || Math.abs(dirY) > deadZone) {
+                // Нормализуем с учётом dead zone
+                const clampedX = Math.sign(dirX) * ((Math.abs(dirX) - deadZone) / (1 - deadZone));
+                const clampedY = Math.sign(dirY) * ((Math.abs(dirY) - deadZone) / (1 - deadZone));
+                
+                // Отправляем координаты (8 направлений)
+                const threshold = 0.3;
+                const dirXFinal = Math.abs(clampedX) > threshold ? Math.sign(clampedX) : 0;
+                const dirYFinal = Math.abs(clampedY) > threshold ? Math.sign(clampedY) : 0;
+                
+                moveX = dirXFinal;
+                moveY = dirYFinal;
+            }
+            
+            // Если движение есть — отправляем
+            if (moveX !== 0 || moveY !== 0) {
+                this._isStopped = false;
+                const offset = 200;
+                const margin = 35;
+                let targetX = 400 + moveX * offset;
+                let targetY = 300 + moveY * offset;
+                targetX = Math.round(Math.max(margin, Math.min(800 - margin, targetX)));
+                targetY = Math.round(Math.max(margin, Math.min(600 - margin, targetY)));
+                this._moveX = targetX;
+                this._moveY = targetY;
+            } else {
+                // Джостик в центре — останавливаемся
                 this._isStopped = true;
                 this._moveX = 400;
                 this._moveY = 300;
-                
                 if (this.isRunning && this.ws && this.ws.readyState === WebSocket.OPEN) {
                     this.ws.send(JSON.stringify({
                         type: 'player_stop'
                     }));
                 }
-                return;
-            }
-            
-            // Снимаем блокировку при движении
-            this._isStopped = false;
-            
-            const offset = 200;
-            const margin = 35;
-            let targetX = 400 + dir.x * offset;
-            let targetY = 300 + dir.y * offset;
-            targetX = Math.round(Math.max(margin, Math.min(800 - margin, targetX)));
-            targetY = Math.round(Math.max(margin, Math.min(600 - margin, targetY)));
-            
-            this._moveX = targetX;
-            this._moveY = targetY;
-        };
-        
-        const highlightBtn = (btn) => {
-            buttons.forEach(b => b.classList.remove('active'));
-            if (btn) btn.classList.add('active');
-        };
-        
-        const handleStart = (e, btn) => {
-            e.preventDefault();
-            const dir = directions[btn.dataset.dir];
-            if (dir) {
-                highlightBtn(btn);
-                setDirection(dir);
             }
         };
         
-        const handleEnd = (e) => {
-            e.preventDefault();
-            highlightBtn(null);
-            setDirection(null);
+        // Сброс джостика
+        const resetJoystick = () => {
+            active = false;
+            thumb.style.transform = 'translate(-50%, -50%)';
+            this._isStopped = true;
+            this._moveX = 400;
+            this._moveY = 300;
+            if (this.isRunning && this.ws && this.ws.readyState === WebSocket.OPEN) {
+                this.ws.send(JSON.stringify({
+                    type: 'player_stop'
+                }));
+            }
         };
         
-        buttons.forEach(btn => {
-            btn.addEventListener('touchstart', (e) => handleStart(e, btn), { passive: false });
-            btn.addEventListener('touchend', handleEnd, { passive: false });
-            btn.addEventListener('touchcancel', handleEnd, { passive: false });
-            btn.addEventListener('mousedown', (e) => handleStart(e, btn));
-            btn.addEventListener('mouseup', handleEnd);
-            btn.addEventListener('mouseleave', handleEnd);
-        });
-        
-        let currentHighlight = null;
-        
-        dpad.addEventListener('touchmove', (e) => {
+        // Touch события
+        base.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            const touch = e.touches[0];
-            if (!touch) return;
-            
-            const element = document.elementFromPoint(touch.clientX, touch.clientY);
-            
-            if (element && element.classList.contains('dpad-btn')) {
-                if (currentHighlight !== element) {
-                    currentHighlight = element;
-                    const dir = directions[element.dataset.dir];
-                    if (dir) {
-                        highlightBtn(element);
-                        setDirection(dir);
-                    }
-                }
-            } else {
-                if (currentHighlight !== null) {
-                    currentHighlight = null;
-                    highlightBtn(null);
-                    setDirection(null);
-                }
-            }
+            active = true;
+            const pos = getPosition(e);
+            updateJoystick(pos.x, pos.y);
         }, { passive: false });
         
-        document.addEventListener('touchend', (e) => {
-            if (!e.target.closest('.dpad')) {
-                currentHighlight = null;
-                highlightBtn(null);
-                setDirection(null);
-            }
+        base.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (!active) return;
+            const pos = getPosition(e);
+            updateJoystick(pos.x, pos.y);
+        }, { passive: false });
+        
+        base.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            resetJoystick();
+        }, { passive: false });
+        
+        base.addEventListener('touchcancel', (e) => {
+            e.preventDefault();
+            resetJoystick();
+        }, { passive: false });
+        
+        // Mouse события (для ПК)
+        base.addEventListener('mousedown', (e) => {
+            active = true;
+            const pos = getPosition(e);
+            updateJoystick(pos.x, pos.y);
+        });
+        
+        window.addEventListener('mousemove', (e) => {
+            if (!active) return;
+            const pos = getPosition(e);
+            updateJoystick(pos.x, pos.y);
+        });
+        
+        window.addEventListener('mouseup', () => {
+            if (!active) return;
+            resetJoystick();
         });
     }
+    // ================================================================
     
     // ===================== ВСПОМОГАТЕЛЬНЫЕ =====================
     
@@ -848,7 +894,7 @@ class FootballGame {
         });
         this.canvas.addEventListener('touchend', (e) => {
             const target = e.target;
-            if (target.id === 'dpad' || target.closest('.dpad') || target.classList.contains('action-btn')) {
+            if (target.id === 'joystickBase' || target.id === 'joystickThumb' || target.classList.contains('action-btn')) {
                 return;
             }
             this.toggleFullscreen();
