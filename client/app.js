@@ -66,10 +66,9 @@ class FootballGame {
         this.finalTeam2 = document.getElementById('finalTeam2');
         this.winnerMessage = document.getElementById('winnerMessage');
         
-        // ========== ПРОСТАЯ ПЕРЕМЕННАЯ ДЛЯ ДВИЖЕНИЯ ==========
+        // Переменные для движения
         this._moveX = 400;
         this._moveY = 300;
-        // =====================================================
         
         this.setupEventListeners();
         this.setupFullscreen();
@@ -77,25 +76,19 @@ class FootballGame {
         this.resizeCanvas();
         this.gameLoop();
         
-        // Запускаем отправку движений
         setInterval(() => this.sendMove(), 50);
     }
     
-    // ===================== ОТПРАВКА ДВИЖЕНИЯ =====================
     sendMove() {
         if (!this.isRunning || !this.ws || this.ws.readyState !== WebSocket.OPEN) return;
-        
-        // Отправляем только если координаты изменились (не центр)
-        if (this._moveX !== 400 || this._moveY !== 300) {
-            this.ws.send(JSON.stringify({
-                type: 'player_movement',
-                x: this._moveX,
-                y: this._moveY
-            }));
-        }
+        // Отправляем всегда, даже если центр (чтобы сервер знал)
+        this.ws.send(JSON.stringify({
+            type: 'player_movement',
+            x: this._moveX,
+            y: this._moveY
+        }));
     }
     
-    // ===================== D-PAD =====================
     setupDpad() {
         const buttons = document.querySelectorAll('.dpad-btn');
         const dpad = document.getElementById('dpad');
@@ -114,9 +107,26 @@ class FootballGame {
         
         const setDirection = (dir) => {
             if (!dir) {
-                // Остановка — центр
-                this._moveX = 400;
-                this._moveY = 300;
+                // Остановка — ищем текущую позицию игрока
+                let myPlayer = null;
+                for (const id in this.players) {
+                    if (this.players[id].id === this.playerId) {
+                        myPlayer = this.players[id];
+                        break;
+                    }
+                }
+                
+                if (myPlayer) {
+                    // Отправляем текущую позицию → игрок останавливается
+                    const px = (myPlayer.x / 800) * this.canvas.width;
+                    const py = (myPlayer.y / 600) * this.canvas.height;
+                    this._moveX = px;
+                    this._moveY = py;
+                    console.log(`🛑 ОСТАНОВКА: (${px}, ${py})`);
+                } else {
+                    this._moveX = this.canvas.width / 2;
+                    this._moveY = this.canvas.height / 2;
+                }
                 return;
             }
             
@@ -127,8 +137,9 @@ class FootballGame {
             targetX = Math.round(Math.max(margin, Math.min(800 - margin, targetX)));
             targetY = Math.round(Math.max(margin, Math.min(600 - margin, targetY)));
             
-            this._moveX = targetX;
-            this._moveY = targetY;
+            // Масштабируем под размер Canvas
+            this._moveX = (targetX / 800) * this.canvas.width;
+            this._moveY = (targetY / 600) * this.canvas.height;
         };
         
         const highlightBtn = (btn) => {
@@ -148,7 +159,7 @@ class FootballGame {
         const handleEnd = (e) => {
             e.preventDefault();
             highlightBtn(null);
-            setDirection(null); // Остановка
+            setDirection(null);
         };
         
         // События на кнопках
@@ -482,9 +493,9 @@ class FootballGame {
         this.resizeCanvas();
         this.gameOverModal.classList.remove('active');
         
-        // Сбрасываем движение
-        this._moveX = 400;
-        this._moveY = 300;
+        // Сбрасываем движение в центр
+        this._moveX = this.canvas.width / 2;
+        this._moveY = this.canvas.height / 2;
         
         let countdown = 5;
         this.timerElement.textContent = '⚡' + countdown;
@@ -590,8 +601,8 @@ class FootballGame {
     handleBackToMenu() {
         this.isRunning = false;
         this._hasReceivedState = false;
-        this._moveX = 400;
-        this._moveY = 300;
+        this._moveX = this.canvas.width / 2;
+        this._moveY = this.canvas.height / 2;
         this.gameOverModal.classList.remove('active');
         this.showScreen('menuScreen');
     }
