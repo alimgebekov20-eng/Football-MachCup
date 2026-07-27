@@ -659,7 +659,7 @@ class FootballGame {
         }, 150);
     }
     
-    // ===================== CANVAS =====================
+    // ===================== CANVAS (16:9) =====================
     
     resizeCanvas() {
         if (!this.canvas) return;
@@ -670,26 +670,38 @@ class FootballGame {
         const availWidth = window.innerWidth;
         const availHeight = window.innerHeight - headerHeight - controlsHeight;
         
-        // Сохраняем пропорции 4:3 (800:600)
-        const aspectRatio = 4 / 3;
+        // 16:9
+        const aspectRatio = 16 / 9;
         let width = availWidth;
-        let height = availHeight;
+        let height = availWidth / aspectRatio;
         
-        if (width / height > aspectRatio) {
+        if (height > availHeight) {
+            height = availHeight;
             width = height * aspectRatio;
-        } else {
-            height = width / aspectRatio;
         }
         
-        this.canvas.width = width;
-        this.canvas.height = height;
-        this.canvas.style.width = width + 'px';
-        this.canvas.style.height = height + 'px';
+        // Базовое разрешение игрового поля (как в Brawl Stars)
+        const baseWidth = 800;
+        const baseHeight = 450; // 800 / 16 * 9 = 450
+        
+        const scaleX = width / baseWidth;
+        const scaleY = height / baseHeight;
+        const scale = Math.min(scaleX, scaleY);
+        
+        this.canvas.width = baseWidth * scale;
+        this.canvas.height = baseHeight * scale;
+        this.canvas.style.width = this.canvas.width + 'px';
+        this.canvas.style.height = this.canvas.height + 'px';
         this.canvas.style.margin = '0 auto';
         this.canvas.style.display = 'block';
         
-        this.fieldWidth = 800;
-        this.fieldHeight = 600;
+        this.fieldWidth = baseWidth;
+        this.fieldHeight = baseHeight;
+        
+        // Сохраняем масштаб для рендера
+        this._scale = scale;
+        this._baseWidth = baseWidth;
+        this._baseHeight = baseHeight;
     }
     
     gameLoop() {
@@ -704,6 +716,10 @@ class FootballGame {
         if (!w || !h) return;
         
         ctx.clearRect(0, 0, w, h);
+        
+        // Масштабируем от базового размера 800x450
+        const scaleX = w / this._baseWidth;
+        const scaleY = h / this._baseHeight;
         
         // --- ПОЛЕ ---
         const gradient = ctx.createLinearGradient(0, 0, 0, h);
@@ -723,34 +739,31 @@ class FootballGame {
             ctx.stroke();
         }
         
-        // --- РАЗМЕТКА (масштабируем от 800x600) ---
-        const scaleX = w / 800;
-        const scaleY = h / 600;
-        
+        // --- РАЗМЕТКА (масштабируем от 800x450) ---
         ctx.strokeStyle = 'rgba(255,255,255,0.4)';
         ctx.lineWidth = 2;
         
         // Центральная линия
         ctx.beginPath();
         ctx.moveTo(400 * scaleX, 20 * scaleY);
-        ctx.lineTo(400 * scaleX, 580 * scaleY);
+        ctx.lineTo(400 * scaleX, (450 - 20) * scaleY);
         ctx.stroke();
         
         // Центральный круг
         ctx.beginPath();
-        ctx.arc(400 * scaleX, 300 * scaleY, 50 * scaleX, 0, Math.PI * 2);
+        ctx.arc(400 * scaleX, 225 * scaleY, 40 * scaleX, 0, Math.PI * 2);
         ctx.stroke();
         
         // Центральная точка
         ctx.beginPath();
-        ctx.arc(400 * scaleX, 300 * scaleY, 4 * scaleX, 0, Math.PI * 2);
+        ctx.arc(400 * scaleX, 225 * scaleY, 4 * scaleX, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(255,255,255,0.4)';
         ctx.fill();
         
         // --- ВОРОТА ---
         const goalWidth = 50 * scaleX;
-        const goalHeight = 120 * scaleY;
-        const goalY = 300 * scaleY - goalHeight / 2;
+        const goalHeight = 100 * scaleY;
+        const goalY = 225 * scaleY - goalHeight / 2;
         const goalDepth = 15 * scaleX;
         
         // Левые ворота
@@ -811,7 +824,7 @@ class FootballGame {
         ctx.lineWidth = 2 * scaleX;
         const penaltyWidth = 80 * scaleX;
         const penaltyHeight = goalHeight + 40 * scaleY;
-        const penaltyY = 300 * scaleY - penaltyHeight / 2;
+        const penaltyY = 225 * scaleY - penaltyHeight / 2;
         ctx.strokeRect(0, penaltyY, penaltyWidth, penaltyHeight);
         ctx.strokeRect(w - penaltyWidth, penaltyY, penaltyWidth, penaltyHeight);
         
@@ -819,7 +832,7 @@ class FootballGame {
         if (this.ball && this.ball.x !== undefined) {
             const bx = this.ball.x * scaleX;
             const by = this.ball.y * scaleY;
-            const br = Math.max(6, this.ball.radius * scaleX);
+            const br = Math.max(5, 10 * scaleX);
             
             ctx.shadowColor = 'rgba(255,255,255,0.3)';
             ctx.shadowBlur = 10;
@@ -862,7 +875,7 @@ class FootballGame {
                 if (player.x === undefined || player.y === undefined) return;
                 const px = player.x * scaleX;
                 const py = player.y * scaleY;
-                const pr = Math.max(12, player.radius * scaleX);
+                const pr = Math.max(12, 14 * scaleX);
                 
                 ctx.shadowColor = 'rgba(0,0,0,0.2)';
                 ctx.shadowBlur = 8;
