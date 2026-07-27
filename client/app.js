@@ -656,12 +656,12 @@ class FootballGame {
         this.showScreen('menuScreen');
     }
     
-    // ===================== ФИНАЛЬНАЯ ВЕРСИЯ =====================
+    // ===================== 8 НАПРАВЛЕНИЙ (Shadow Fight 2 стиль) =====================
     handleJoystickMove(direction) {
-        const isMoving = Math.abs(direction.x) > 0.05 || Math.abs(direction.y) > 0.05;
+        const isMoving = Math.abs(direction.x) > 0.15 || Math.abs(direction.y) > 0.15;
         
         if (!isMoving) {
-            // ✅ ОТПРАВЛЯЕМ ЦЕНТР, НО ТОЛЬКО 1 РАЗ
+            // ОСТАНОВКА — отправляем центр, но только 1 раз
             const centerX = this.canvas.width / 2;
             const centerY = this.canvas.height / 2;
             
@@ -678,25 +678,64 @@ class FootballGame {
             return;
         }
         
+        // 🔥 8 НАПРАВЛЕНИЙ
+        let dirX = 0;
+        let dirY = 0;
+        
+        // Определяем направление по X
+        if (direction.x > 0.15) dirX = 1;
+        else if (direction.x < -0.15) dirX = -1;
+        
+        // Определяем направление по Y
+        if (direction.y > 0.15) dirY = 1;
+        else if (direction.y < -0.15) dirY = -1;
+        
+        // Если оба нуля — стоим
+        if (dirX === 0 && dirY === 0) {
+            const centerX = this.canvas.width / 2;
+            const centerY = this.canvas.height / 2;
+            if (this._lastMoveState.x !== centerX || this._lastMoveState.y !== centerY) {
+                this.moveState = {
+                    x: centerX,
+                    y: centerY
+                };
+                this._lastMoveState = {
+                    x: centerX,
+                    y: centerY
+                };
+            }
+            return;
+        }
+        
+        // Вычисляем целевую позицию (диагональ или прямо)
         const fieldWidth = this.canvas.width;
         const fieldHeight = this.canvas.height;
         const margin = 35;
+        const offset = Math.min(fieldWidth, fieldHeight) * 0.3;
         
-        const maxOffsetX = fieldWidth * 0.25;
-        const maxOffsetY = fieldHeight * 0.25;
-        
-        let targetX = fieldWidth / 2 + direction.x * maxOffsetX;
-        let targetY = fieldHeight / 2 + direction.y * maxOffsetY;
+        let targetX = fieldWidth / 2 + dirX * offset;
+        let targetY = fieldHeight / 2 + dirY * offset;
         
         targetX = Math.max(margin, Math.min(fieldWidth - margin, targetX));
         targetY = Math.max(margin, Math.min(fieldHeight - margin, targetY));
         
-        this.moveState = {
-            x: targetX,
-            y: targetY
-        };
+        // Округляем до целых, чтобы координаты были строгими
+        targetX = Math.round(targetX);
+        targetY = Math.round(targetY);
+        
+        // Отправляем только если изменилось
+        if (this._lastMoveState.x !== targetX || this._lastMoveState.y !== targetY) {
+            this.moveState = {
+                x: targetX,
+                y: targetY
+            };
+            this._lastMoveState = {
+                x: targetX,
+                y: targetY
+            };
+        }
     }
-    // ===============================================================
+    // ====================================================================
     
     handleKick() {
         if (!this.isRunning || !this.ws || this.ws.readyState !== WebSocket.OPEN) return;
