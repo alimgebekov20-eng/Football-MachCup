@@ -189,56 +189,20 @@ class GameLogic {
     }
   }
 
-  // ===================== ГЛАВНОЕ ИСПРАВЛЕНИЕ =====================
   updatePlayerPosition(playerId, x, y) {
     const player = this.players.get(playerId);
     if (!player || !this.isRunning) return;
     
-    // 👇 ЕСЛИ КООРДИНАТЫ ВНЕ ПОЛЯ — ИГНОРИРУЕМ
-    if (x < 0 || x > this.field.width || y < 0 || y > this.field.height) {
-      console.log(`⚠️ ${player.name}: координаты вне поля (${x}, ${y}) — ИГНОР`);
-      return;
-    }
-    
-    // 👇 ЕСЛИ КООРДИНАТЫ В ПРАВОМ НИЖНЕМ УГЛУ — ОСТАНАВЛИВАЕМ
-    if (x > 750 && y > 550) {
-      console.log(`🛑 ${player.name}: попытка уйти в угол (${x}, ${y}) — ОСТАНОВКА`);
-      player.targetX = player.x;
-      player.targetY = player.y;
-      return;
-    }
-    
-    // 👇 ЕСЛИ КООРДИНАТЫ В ЛЕВОМ ВЕРХНЕМ УГЛУ — ОСТАНАВЛИВАЕМ
-    if (x < 50 && y < 50) {
-      console.log(`🛑 ${player.name}: попытка уйти в угол (${x}, ${y}) — ОСТАНОВКА`);
-      player.targetX = player.x;
-      player.targetY = player.y;
-      return;
-    }
-    
-    // Нормальная обработка
     const margin = 25;
     const targetX = Math.max(margin, Math.min(this.field.width - margin, x));
     const targetY = Math.max(margin, Math.min(this.field.height - margin, y));
     
-    // Если координаты сильно отличаются от текущих — проверяем
-    const dist = Math.hypot(targetX - player.x, targetY - player.y);
-    if (dist > 100) {
-      console.log(`⚠️ ${player.name}: слишком большой скачок (${dist}px) — ОГРАНИЧИВАЕМ`);
-      const angle = Math.atan2(targetY - player.y, targetX - player.x);
-      player.targetX = player.x + Math.cos(angle) * 100;
-      player.targetY = player.y + Math.sin(angle) * 100;
-    } else {
-      player.targetX = targetX;
-      player.targetY = targetY;
-    }
-    
-    console.log(`📥 ${player.name} → target: (${player.targetX}, ${player.targetY})`);
+    player.targetX = targetX;
+    player.targetY = targetY;
     
     if (x > player.x) player.direction = 1;
     else if (x < player.x) player.direction = -1;
   }
-  // ================================================================
 
   checkGoal() {
     const bx = this.ball.x;
