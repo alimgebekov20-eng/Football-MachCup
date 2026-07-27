@@ -19,7 +19,7 @@ const lobbyManager = new LobbyManager();
 
 wss.on('connection', (ws) => {
   console.log('Новый игрок подключился');
-
+  
   ws.send(JSON.stringify({
     type: 'connected',
     message: 'Добро пожаловать в футбольную игру!'
@@ -46,7 +46,7 @@ wss.on('connection', (ws) => {
 
 function handleMessage(ws, data) {
   const player = players.get(ws);
-
+  
   switch (data.type) {
     case 'auth':
       handleAuth(ws, data);
@@ -71,6 +71,9 @@ function handleMessage(ws, data) {
       break;
     case 'player_movement':
       if (player && player.gameId) handlePlayerMovement(ws, data);
+      break;
+    case 'player_stop':
+      if (player && player.gameId) handlePlayerStop(ws);
       break;
     default:
       console.log('Неизвестный тип:', data.type);
@@ -196,7 +199,6 @@ function handleLeaveLobby(ws) {
   broadcastLobbyList();
 }
 
-// ===================== ГЛАВНАЯ ФУНКЦИЯ СТАРТА ИГРЫ =====================
 function handleStartGame(ws) {
   const player = players.get(ws);
   if (!player || !player.lobbyId) {
@@ -232,10 +234,9 @@ function handleStartGame(ws) {
     }
   });
 
-  // ЗАПУСКАЕМ ИГРУ (таймер + физика)
   game.startGame();
 
-  // ✅ АВТОМАТИЧЕСКАЯ РАССЫЛКА СОСТОЯНИЯ КАЖДЫЕ 50мс
+  // Автоматическая рассылка состояния
   const broadcastInterval = setInterval(() => {
     if (!game.isRunning) {
       clearInterval(broadcastInterval);
@@ -245,7 +246,6 @@ function handleStartGame(ws) {
   }, 50);
   game.broadcastInterval = broadcastInterval;
 
-  // ОТПРАВЛЯЕМ КАЖДОМУ ИГРОКУ
   playersInLobby.forEach(p => {
     const playerWs = findPlayerWebSocket(p.id);
     if (playerWs && playerWs.readyState === WebSocket.OPEN) {
@@ -269,7 +269,6 @@ function handleStartGame(ws) {
 
   console.log(`🎮 ИГРА ${gameId} УСПЕШНО ЗАПУЩЕНА! Игроков: ${playersInLobby.length}`);
 }
-// =====================================================================
 
 function handleGameAction(ws, data) {
   const player = players.get(ws);
@@ -291,6 +290,18 @@ function handlePlayerMovement(ws, data) {
 
   game.updatePlayerPosition(player.id, data.x, data.y);
 }
+
+// ========== НОВАЯ ФУНКЦИЯ ДЛЯ ОСТАНОВКИ ==========
+function handlePlayerStop(ws) {
+  const player = players.get(ws);
+  if (!player || !player.gameId) return;
+  
+  const game = games.get(player.gameId);
+  if (!game) return;
+  
+  game.stopPlayer(player.id);
+}
+// =================================================
 
 function handleDisconnect(ws) {
   const player = players.get(ws);
@@ -322,21 +333,25 @@ function handleDisconnect(ws) {
     const game = games.get(player.gameId);
     if (game) {
       game.removePlayer(player.id);
-      if (game.players.size === 0) games.delete(player.gameId);
-      else broadcastGameState(player.gameId);
+      if (game.players.size === 0) {
+        games.delete(player.gameId);
+      } else {
+        broadcastGameState(player.gameId);
+      }
     }
   }
 
   players.delete(ws);
 }
 
-// Вспомогательные функции
 function generatePlayerId() {
   return 'p_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
 }
+
 function generateLobbyId() {
   return 'L' + Math.random().toString(36).substr(2, 6).toUpperCase();
 }
+
 function generateGameId() {
   return 'G_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
 }
