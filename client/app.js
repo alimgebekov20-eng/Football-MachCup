@@ -18,6 +18,7 @@ class FootballGame {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
         
+        // DOM элементы
         this.loginScreen = document.getElementById('loginScreen');
         this.menuScreen = document.getElementById('menuScreen');
         this.createLobbyScreen = document.getElementById('createLobbyScreen');
@@ -65,14 +66,136 @@ class FootballGame {
         this.finalTeam2 = document.getElementById('finalTeam2');
         this.winnerMessage = document.getElementById('winnerMessage');
         
-        // ========== УПРАВЛЕНИЕ ПОЛНОСТЬЮ УДАЛЕНО ==========
-        // Нет джостика, нет D-Pad, нет движений
-        // =================================================
+        // ========== ПРОСТАЯ ПЕРЕМЕННАЯ ДЛЯ ДВИЖЕНИЯ ==========
+        this._moveX = 400;
+        this._moveY = 300;
+        // =====================================================
         
         this.setupEventListeners();
         this.setupFullscreen();
+        this.setupDpad();
         this.resizeCanvas();
         this.gameLoop();
+        
+        // Запускаем отправку движений
+        setInterval(() => this.sendMove(), 50);
+    }
+    
+    // ===================== ОТПРАВКА ДВИЖЕНИЯ =====================
+    sendMove() {
+        if (!this.isRunning || !this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+        
+        // Отправляем только если координаты изменились (не центр)
+        if (this._moveX !== 400 || this._moveY !== 300) {
+            this.ws.send(JSON.stringify({
+                type: 'player_movement',
+                x: this._moveX,
+                y: this._moveY
+            }));
+        }
+    }
+    
+    // ===================== D-PAD =====================
+    setupDpad() {
+        const buttons = document.querySelectorAll('.dpad-btn');
+        const dpad = document.getElementById('dpad');
+        
+        const directions = {
+            'up-left': { x: -1, y: -1 },
+            'up': { x: 0, y: -1 },
+            'up-right': { x: 1, y: -1 },
+            'left': { x: -1, y: 0 },
+            'center': { x: 0, y: 0 },
+            'right': { x: 1, y: 0 },
+            'down-left': { x: -1, y: 1 },
+            'down': { x: 0, y: 1 },
+            'down-right': { x: 1, y: 1 }
+        };
+        
+        const setDirection = (dir) => {
+            if (!dir) {
+                // Остановка — центр
+                this._moveX = 400;
+                this._moveY = 300;
+                return;
+            }
+            
+            const offset = 200;
+            const margin = 35;
+            let targetX = 400 + dir.x * offset;
+            let targetY = 300 + dir.y * offset;
+            targetX = Math.round(Math.max(margin, Math.min(800 - margin, targetX)));
+            targetY = Math.round(Math.max(margin, Math.min(600 - margin, targetY)));
+            
+            this._moveX = targetX;
+            this._moveY = targetY;
+        };
+        
+        const highlightBtn = (btn) => {
+            buttons.forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+        };
+        
+        const handleStart = (e, btn) => {
+            e.preventDefault();
+            const dir = directions[btn.dataset.dir];
+            if (dir) {
+                highlightBtn(btn);
+                setDirection(dir);
+            }
+        };
+        
+        const handleEnd = (e) => {
+            e.preventDefault();
+            highlightBtn(null);
+            setDirection(null); // Остановка
+        };
+        
+        // События на кнопках
+        buttons.forEach(btn => {
+            btn.addEventListener('touchstart', (e) => handleStart(e, btn), { passive: false });
+            btn.addEventListener('touchend', handleEnd, { passive: false });
+            btn.addEventListener('touchcancel', handleEnd, { passive: false });
+            btn.addEventListener('mousedown', (e) => handleStart(e, btn));
+            btn.addEventListener('mouseup', handleEnd);
+            btn.addEventListener('mouseleave', handleEnd);
+        });
+        
+        // Проведение пальцем
+        let currentHighlight = null;
+        
+        dpad.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            if (!touch) return;
+            
+            const element = document.elementFromPoint(touch.clientX, touch.clientY);
+            
+            if (element && element.classList.contains('dpad-btn')) {
+                if (currentHighlight !== element) {
+                    currentHighlight = element;
+                    const dir = directions[element.dataset.dir];
+                    if (dir) {
+                        highlightBtn(element);
+                        setDirection(dir);
+                    }
+                }
+            } else {
+                if (currentHighlight !== null) {
+                    currentHighlight = null;
+                    highlightBtn(null);
+                    setDirection(null);
+                }
+            }
+        }, { passive: false });
+        
+        document.addEventListener('touchend', (e) => {
+            if (!e.target.closest('.dpad')) {
+                currentHighlight = null;
+                highlightBtn(null);
+                setDirection(null);
+            }
+        });
     }
     
     // ===================== ВСПОМОГАТЕЛЬНЫЕ =====================
@@ -359,11 +482,10 @@ class FootballGame {
         this.resizeCanvas();
         this.gameOverModal.classList.remove('active');
         
-        // ========== НИКАКОГО ДВИЖЕНИЯ ==========
-        // Мы НЕ отправляем player_movement
-        // ======================================
+        // Сбрасываем движение
+        this._moveX = 400;
+        this._moveY = 300;
         
-        // Обратный отсчёт
         let countdown = 5;
         this.timerElement.textContent = '⚡' + countdown;
         this.timerElement.style.color = '#ffd700';
@@ -393,7 +515,7 @@ class FootballGame {
                 this.tackleBtn.disabled = false;
                 this.kickBtn.style.opacity = '1';
                 this.tackleBtn.style.opacity = '1';
-                console.log('🚀 МАТЧ НАЧАЛСЯ! УПРАВЛЕНИЕ ОТКЛЮЧЕНО ДЛЯ ТЕСТА');
+                console.log('🚀 МАТЧ НАЧАЛСЯ!');
             }
         }, 1000);
         
@@ -429,9 +551,6 @@ class FootballGame {
             }
         }, 2000);
     }
-    
-    // ========== НЕТ startMovementLoop() ==========
-    // ========== НЕТ ОТПРАВКИ ДВИЖЕНИЯ ===========
     
     updateGameState(state) {
         if (!state) return;
@@ -471,12 +590,13 @@ class FootballGame {
     handleBackToMenu() {
         this.isRunning = false;
         this._hasReceivedState = false;
+        this._moveX = 400;
+        this._moveY = 300;
         this.gameOverModal.classList.remove('active');
         this.showScreen('menuScreen');
     }
     
-    // ========== НЕТ D-Pad ==========
-    // ========== НЕТ УПРАВЛЕНИЯ =====
+    // ===================== ДЕЙСТВИЯ =====================
     
     handleKick() {
         if (!this.isRunning || !this.ws || this.ws.readyState !== WebSocket.OPEN) return;
@@ -507,7 +627,7 @@ class FootballGame {
     resizeCanvas() {
         if (!this.canvas) return;
         const headerHeight = document.querySelector('.game-header')?.offsetHeight || 50;
-        const controlsHeight = 200;
+        const controlsHeight = 220;
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight - headerHeight - controlsHeight;
     }
