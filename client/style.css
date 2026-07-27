@@ -39,16 +39,11 @@ body {
     to { opacity: 1; transform: scale(1); }
 }
 
-/* ===== ВСЕ ЭКРАНЫ ===== */
-#loginScreen,
-#menuScreen,
-#createLobbyScreen,
-#lobbyScreen,
-#findLobbyScreen {
+/* ===== ЭКРАН ВХОДА ===== */
+#loginScreen {
     background: radial-gradient(ellipse at center, #1a1a3e 0%, #0a0a1a 100%);
 }
 
-/* ===== ЭКРАН ВХОДА ===== */
 .login-container {
     text-align: center;
     padding: 20px;
@@ -602,15 +597,16 @@ body {
     box-shadow: inset 0 0 100px rgba(0,0,0,0.3);
 }
 
+/* ===== D-PAD (8 НАПРАВЛЕНИЙ) ===== */
 .controls {
     position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
-    height: 200px;
+    height: 220px;
     display: flex;
     justify-content: space-between;
-    align-items: flex-end;
+    align-items: center;
     padding: 15px 20px;
     pointer-events: none;
     z-index: 20;
@@ -621,36 +617,56 @@ body {
     pointer-events: auto;
 }
 
-#joystickContainer {
-    width: 130px;
-    height: 130px;
+.dpad {
+    display: grid;
+    grid-template-columns: repeat(3, 60px);
+    grid-template-rows: repeat(3, 60px);
+    gap: 4px;
     margin-bottom: 10px;
-}
-
-#joystickBase {
-    width: 130px;
-    height: 130px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.1);
-    border: 3px solid rgba(255,255,255,0.15);
-    position: relative;
+    background: rgba(0,0,0,0.3);
+    padding: 8px;
+    border-radius: 16px;
     backdrop-filter: blur(10px);
-    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-    touch-action: none;
+    border: 2px solid rgba(255,255,255,0.1);
 }
 
-#joystickThumb {
-    width: 55px;
-    height: 55px;
-    border-radius: 50%;
-    background: radial-gradient(circle, #4facfe, #00f2fe);
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    box-shadow: 0 5px 20px rgba(79,172,254,0.4);
-    transition: none;
+.dpad-btn {
+    width: 60px;
+    height: 60px;
+    border: none;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.5);
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.05s;
     touch-action: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    -webkit-touch-callout: none;
+}
+
+.dpad-btn:active,
+.dpad-btn.active {
+    background: rgba(79,172,254,0.4);
+    color: white;
+    transform: scale(0.92);
+    box-shadow: 0 0 20px rgba(79,172,254,0.3);
+}
+
+.dpad-btn[data-dir="center"] {
+    background: rgba(255,255,255,0.03);
+    color: rgba(255,255,255,0.2);
+    font-size: 0.8rem;
+}
+
+.dpad-btn[data-dir="center"]:active,
+.dpad-btn[data-dir="center"].active {
+    background: rgba(255,255,255,0.05);
+    box-shadow: none;
+    transform: scale(0.95);
 }
 
 .action-buttons {
@@ -785,19 +801,17 @@ body {
 @media (max-width: 480px) {
     .logo h1 { font-size: 1.8rem; }
     
-    #joystickContainer {
-        width: 100px;
-        height: 100px;
+    .dpad {
+        grid-template-columns: repeat(3, 50px);
+        grid-template-rows: repeat(3, 50px);
+        gap: 3px;
+        padding: 6px;
     }
     
-    #joystickBase {
-        width: 100px;
-        height: 100px;
-    }
-    
-    #joystickThumb {
-        width: 45px;
-        height: 45px;
+    .dpad-btn {
+        width: 50px;
+        height: 50px;
+        font-size: 1rem;
     }
     
     .action-btn {
@@ -811,7 +825,7 @@ body {
     }
     
     .controls {
-        height: 170px;
+        height: 180px;
         padding: 10px 15px;
     }
     
@@ -834,19 +848,17 @@ body {
 }
 
 @media (max-width: 380px) {
-    #joystickContainer {
-        width: 80px;
-        height: 80px;
+    .dpad {
+        grid-template-columns: repeat(3, 40px);
+        grid-template-rows: repeat(3, 40px);
+        gap: 2px;
+        padding: 4px;
     }
     
-    #joystickBase {
-        width: 80px;
-        height: 80px;
-    }
-    
-    #joystickThumb {
-        width: 35px;
-        height: 35px;
+    .dpad-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 0.8rem;
     }
     
     .action-btn {
@@ -860,7 +872,7 @@ body {
     }
     
     .controls {
-        height: 140px;
+        height: 150px;
         padding: 8px 12px;
     }
 }
