@@ -122,18 +122,13 @@
         
         <canvas id="gameCanvas"></canvas>
         
-        <!-- D-PAD УПРАВЛЕНИЕ -->
+        <!-- ВИРТУАЛЬНЫЙ ДЖОСТИК -->
         <div class="controls">
-            <div class="dpad" id="dpad">
-                <button class="dpad-btn" data-dir="up-left">↖</button>
-                <button class="dpad-btn" data-dir="up">↑</button>
-                <button class="dpad-btn" data-dir="up-right">↗</button>
-                <button class="dpad-btn" data-dir="left">←</button>
-                <button class="dpad-btn" data-dir="center">●</button>
-                <button class="dpad-btn" data-dir="right">→</button>
-                <button class="dpad-btn" data-dir="down-left">↙</button>
-                <button class="dpad-btn" data-dir="down">↓</button>
-                <button class="dpad-btn" data-dir="down-right">↘</button>
+            <div id="joystickContainer">
+                <div id="joystickBase">
+                    <div id="joystickThumb"></div>
+                    <div id="joystickDirection"></div>
+                </div>
             </div>
             
             <div class="action-buttons">
