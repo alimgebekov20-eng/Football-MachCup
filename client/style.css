@@ -884,3 +884,35 @@ body {
         padding: 8px 12px;
     }
 }
+
+.player-stats {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 8px;
+    flex-wrap: wrap;
+}
+
+.player-stats span {
+    font-size: 0.8rem;
+    background: rgba(255,255,255,0.05);
+    padding: 2px 10px;
+    border-radius: 12px;
+}
+
+#changeNameBtn {
+    margin-top: 8px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.3s;
+}
+
+#changeNameBtn:active {
+    transform: scale(0.95);
+    background: rgba(255,255,255,0.1);
+}
