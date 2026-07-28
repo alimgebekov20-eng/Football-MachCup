@@ -11,7 +11,7 @@ class GameLogic {
 
     this.ball = {
       x: 400,
-      y: 300,
+      y: 225,
       vx: 0,
       vy: 0,
       radius: 10,
@@ -19,9 +19,9 @@ class GameLogic {
 
     this.field = {
       width: 800,
-      height: 600,
+      height: 450,
       goalWidth: 80,
-      goalHeight: 120,
+      goalHeight: 100,
     };
 
     this.score = {
@@ -30,7 +30,7 @@ class GameLogic {
     };
     
     this._started = false;
-    this._ballOwner = null; // 👈 НОВАЯ ПЕРЕМЕННАЯ
+    this._ballOwner = null;
   }
 
   addPlayer(playerId, playerName, team) {
@@ -38,16 +38,16 @@ class GameLogic {
 
     const isTeam1 = team === 'team1';
     const baseX = isTeam1 ? 150 : 650;
-    const offsetY = this.players.size % 2 === 0 ? -40 : 40;
+    const offsetY = this.players.size % 2 === 0 ? -35 : 35;
 
     this.players.set(playerId, {
       id: playerId,
       name: playerName,
       team: team,
       x: baseX,
-      y: 300 + offsetY,
+      y: 225 + offsetY,
       targetX: baseX,
-      targetY: 300 + offsetY,
+      targetY: 225 + offsetY,
       radius: 14,
       hasBall: false,
       speed: 4,
@@ -128,11 +128,11 @@ class GameLogic {
     for (const [id, player] of this.players) {
       if (player.team === 'team1') {
         player.x = 150 + (team1Count % 2 === 0 ? -35 : 35);
-        player.y = 300 + (team1Count % 2 === 0 ? -40 : 40);
+        player.y = 225 + (team1Count % 2 === 0 ? -35 : 35);
         team1Count++;
       } else {
         player.x = 650 + (team2Count % 2 === 0 ? -35 : 35);
-        player.y = 300 + (team2Count % 2 === 0 ? -40 : 40);
+        player.y = 225 + (team2Count % 2 === 0 ? -35 : 35);
         team2Count++;
       }
       player.hasBall = false;
@@ -143,7 +143,7 @@ class GameLogic {
     }
 
     this.ball.x = 400;
-    this.ball.y = 300;
+    this.ball.y = 225;
     this.ball.vx = 0;
     this.ball.vy = 0;
     this._ballOwner = null;
@@ -168,7 +168,6 @@ class GameLogic {
     }
   }
 
-  // ========== НОВЫЙ МЕТОД: ПЕРЕХВАТ МЯЧА ==========
   checkBallPickup() {
     for (const [id, player] of this.players) {
       if (player.hasBall) continue;
@@ -182,7 +181,6 @@ class GameLogic {
       }
     }
   }
-  // =================================================
 
   playerKick(playerId) {
     const player = this.players.get(playerId);
@@ -192,7 +190,7 @@ class GameLogic {
     this.ball.vy = (Math.random() - 0.5) * 3;
     player.hasBall = false;
     this._ballOwner = null;
-    this.checkGoal();
+    setTimeout(() => this.checkGoal(), 50);
   }
 
   playerTackle(playerId) {
@@ -239,24 +237,28 @@ class GameLogic {
     const by = this.ball.y;
     const goalY = this.field.height / 2;
     const goalHalf = this.field.goalHeight / 2;
+    
+    console.log(`⚽ Проверка гола: мяч (${bx}, ${by}), ворота y=${goalY}, половина=${goalHalf}`);
 
     if (bx < 15 && by > goalY - goalHalf && by < goalY + goalHalf) {
       this.score.team2++;
-      console.log(`⚽ ГОЛ! team2 → ${this.score.team2}`);
+      console.log(`⚽⚽⚽ ГОЛ! team2 → ${this.score.team2} ⚽⚽⚽`);
       this.resetPositions();
       const p = Array.from(this.players.values()).find((pl) => pl.team === 'team2');
       if (p) this.giveBall(p.id);
-      return;
+      return true;
     }
 
     if (bx > this.field.width - 15 && by > goalY - goalHalf && by < goalY + goalHalf) {
       this.score.team1++;
-      console.log(`⚽ ГОЛ! team1 → ${this.score.team1}`);
+      console.log(`⚽⚽⚽ ГОЛ! team1 → ${this.score.team1} ⚽⚽⚽`);
       this.resetPositions();
       const p = Array.from(this.players.values()).find((pl) => pl.team === 'team1');
       if (p) this.giveBall(p.id);
-      return;
+      return true;
     }
+    
+    return false;
   }
 
   update() {
@@ -300,6 +302,7 @@ class GameLogic {
       const r = this.ball.radius;
       const w = this.field.width;
       const h = this.field.height;
+      
       if (this.ball.x < r || this.ball.x > w - r) {
         this.ball.vx *= -0.6;
         this.ball.x = Math.max(r, Math.min(w - r, this.ball.x));
@@ -309,9 +312,7 @@ class GameLogic {
         this.ball.y = Math.max(r, Math.min(h - r, this.ball.y));
       }
       
-      // 👇 ПРОВЕРЯЕМ ПЕРЕХВАТ МЯЧА
       this.checkBallPickup();
-      
       this.checkGoal();
     }
   }
