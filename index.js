@@ -3,6 +3,7 @@ const { createServer } = require('http');
 const WebSocket = require('ws');
 const path = require('path');
 const cors = require('cors');
+const fs = require('fs');
 const { GameLogic } = require('./gameLogic');
 const { LobbyManager } = require('./lobbyManager');
 
@@ -12,6 +13,23 @@ const wss = new WebSocket.Server({ server });
 
 app.use(cors());
 app.use(express.static(path.join(__dirname, 'client')));
+
+// ========== ФАЙЛ С ИГРОКАМИ ==========
+const PLAYERS_FILE = path.join(__dirname, 'players.json');
+
+function loadPlayers() {
+  try {
+    const data = fs.readFileSync(PLAYERS_FILE, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    return [];
+  }
+}
+
+function savePlayers(players) {
+  fs.writeFileSync(PLAYERS_FILE, JSON.stringify(players, null, 2));
+}
+// =====================================
 
 const games = new Map();
 const players = new Map();
@@ -50,6 +68,15 @@ function handleMessage(ws, data) {
   switch (data.type) {
     case 'auth':
       handleAuth(ws, data);
+      break;
+    case 'get_player':
+      handleGetPlayer(ws, data);
+      break;
+    case 'update_player':
+      handleUpdatePlayer(ws, data);
+      break;
+    case 'change_name':
+      handleChangeName(ws, data);
       break;
     case 'create_lobby':
       handleCreateLobby(ws, data);
@@ -105,6 +132,114 @@ function handleAuth(ws, data) {
 
   console.log(`✅ Игрок ${data.playerName.trim()} авторизован`);
 }
+
+// ===== СИСТЕМА ИГРОКОВ =====
+function handleGetPlayer(ws, data) {
+  const playersList = loadPlayers();
+  const player = playersList.find(p => p.id === data.playerId);
+  
+  if (player) {
+    ws.send(JSON.stringify({
+      type: 'player_data',
+      data: {
+        id: player.id,
+        name: player.name,
+        stars: player.stars || 100,
+        games: player.games || 0,
+        wins: player.wins || 0,
+        losses: player.losses || 0
+      }
+    }));
+  } else {
+    const newPlayer = {
+      id: data.playerId,
+      name: data.playerName || 'Игрок',
+      stars: 100,
+      games: 0,
+      wins: 0,
+      losses: 0,
+      createdAt: Date.now()
+    };
+    playersList.push(newPlayer);
+    savePlayers(playersList);
+    
+    ws.send(JSON.stringify({
+      type: 'player_data',
+      data: newPlayer
+    }));
+  }
+}
+
+function handleUpdatePlayer(ws, data) {
+  const playersList = loadPlayers();
+  const player = playersList.find(p => p.id === data.playerId);
+  
+  if (!player) return;
+  
+  player.games = (player.games || 0) + 1;
+  if (data.won) {
+    player.wins = (player.wins || 0) + 1;
+  } else {
+    player.losses = (player.losses || 0) + 1;
+  }
+  
+  const goalDiff = Math.abs(data.score1 - data.score2);
+  let starsChange = 0;
+  
+  if (data.won) {
+    starsChange = 50 + (data.score1 - data.score2) * 10;
+  } else {
+    starsChange = -30 - (data.score2 - data.score1) * 5;
+  }
+  
+  const newStars = Math.max(0, (player.stars || 100) + starsChange);
+  player.stars = Math.round(newStars);
+  
+  savePlayers(playersList);
+  
+  ws.send(JSON.stringify({
+    type: 'rating_updated',
+    stars: player.stars,
+    change: starsChange,
+    games: player.games,
+    wins: player.wins,
+    losses: player.losses
+  }));
+}
+
+function handleChangeName(ws, data) {
+  const playersList = loadPlayers();
+  
+  const existing = playersList.find(p => p.name === data.newName && p.id !== data.playerId);
+  if (existing) {
+    ws.send(JSON.stringify({
+      type: 'name_change_result',
+      success: false,
+      message: 'Это имя уже занято'
+    }));
+    return;
+  }
+  
+  const player = playersList.find(p => p.id === data.playerId);
+  if (!player) {
+    ws.send(JSON.stringify({
+      type: 'name_change_result',
+      success: false,
+      message: 'Игрок не найден'
+    }));
+    return;
+  }
+  
+  player.name = data.newName;
+  savePlayers(playersList);
+  
+  ws.send(JSON.stringify({
+    type: 'name_change_result',
+    success: true,
+    newName: data.newName
+  }));
+}
+// =================================
 
 function handleCreateLobby(ws, data) {
   const player = players.get(ws);
