@@ -236,7 +236,6 @@ function handleStartGame(ws) {
 
   game.startGame();
 
-  // Автоматическая рассылка состояния
   const broadcastInterval = setInterval(() => {
     if (!game.isRunning) {
       clearInterval(broadcastInterval);
@@ -291,7 +290,6 @@ function handlePlayerMovement(ws, data) {
   game.updatePlayerPosition(player.id, data.x, data.y);
 }
 
-// ========== НОВАЯ ФУНКЦИЯ ДЛЯ ОСТАНОВКИ ==========
 function handlePlayerStop(ws) {
   const player = players.get(ws);
   if (!player || !player.gameId) return;
@@ -301,7 +299,6 @@ function handlePlayerStop(ws) {
   
   game.stopPlayer(player.id);
 }
-// =================================================
 
 function handleDisconnect(ws) {
   const player = players.get(ws);
