@@ -15,6 +15,7 @@ class FootballGame {
         this.isFullscreen = false;
         this._hasReceivedState = false;
         this._isStopped = false;
+        this.playerData = null;
         
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
@@ -30,6 +31,11 @@ class FootballGame {
         this.enterBtn = document.getElementById('enterGameBtn');
         this.displayName = document.getElementById('displayName');
         this.displayId = document.getElementById('displayId');
+        this.displayStars = document.getElementById('displayStars');
+        this.displayGames = document.getElementById('displayGames');
+        this.displayWins = document.getElementById('displayWins');
+        this.displayLosses = document.getElementById('displayLosses');
+        this.changeNameBtn = document.getElementById('changeNameBtn');
         
         this.createLobbyBtn = document.getElementById('createLobbyBtn');
         this.findLobbyBtn = document.getElementById('findLobbyBtn');
@@ -66,7 +72,6 @@ class FootballGame {
         this.finalTeam2 = document.getElementById('finalTeam2');
         this.winnerMessage = document.getElementById('winnerMessage');
         
-        // Переменные для джостика
         this._moveX = 400;
         this._moveY = 300;
         this._joystickActive = false;
@@ -92,7 +97,6 @@ class FootballGame {
         }
     }
     
-    // ===================== ВИРТУАЛЬНЫЙ ДЖОСТИК =====================
     setupJoystick() {
         const base = document.getElementById('joystickBase');
         const thumb = document.getElementById('joystickThumb');
@@ -232,9 +236,6 @@ class FootballGame {
             resetJoystick();
         });
     }
-    // ================================================================
-    
-    // ===================== ВСПОМОГАТЕЛЬНЫЕ =====================
     
     showScreen(screenId) {
         const screens = ['loginScreen', 'menuScreen', 'createLobbyScreen', 'lobbyScreen', 'findLobbyScreen', 'gameScreen'];
@@ -246,9 +247,14 @@ class FootballGame {
                 el.classList.remove('active');
             }
         });
+        
+        if (screenId === 'menuScreen' && this.playerData) {
+            this.displayStars.textContent = '⭐ ' + this.playerData.stars;
+            this.displayGames.textContent = '🎮 ' + this.playerData.games;
+            this.displayWins.textContent = '🏆 ' + this.playerData.wins + 'W';
+            this.displayLosses.textContent = '💔 ' + this.playerData.losses + 'L';
+        }
     }
-    
-    // ===================== АВТОРИЗАЦИЯ =====================
     
     handleLogin() {
         const name = this.playerNameInput.value.trim();
@@ -261,8 +267,19 @@ class FootballGame {
             }, 2000);
             return;
         }
+        
         this.playerName = name;
         this.connectWebSocket();
+        
+        setTimeout(() => {
+            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                this.ws.send(JSON.stringify({
+                    type: 'get_player',
+                    playerId: this.playerId,
+                    playerName: this.playerName
+                }));
+            }
+        }, 500);
     }
     
     connectWebSocket() {
@@ -309,10 +326,42 @@ class FootballGame {
                 this.playerId = data.playerId;
                 this.displayName.textContent = data.playerName;
                 this.displayId.textContent = `ID: ${data.playerId.slice(0, 8)}`;
-                this.showScreen('menuScreen');
                 break;
             case 'auth_error':
                 alert(data.message);
+                break;
+            case 'player_data':
+                this.playerData = data.data;
+                this.displayName.textContent = data.data.name;
+                this.displayStars.textContent = '⭐ ' + data.data.stars;
+                this.displayGames.textContent = '🎮 ' + data.data.games;
+                this.displayWins.textContent = '🏆 ' + data.data.wins + 'W';
+                this.displayLosses.textContent = '💔 ' + data.data.losses + 'L';
+                this.showScreen('menuScreen');
+                break;
+            case 'rating_updated':
+                if (this.playerData) {
+                    this.playerData.stars = data.stars;
+                    this.playerData.games = data.games;
+                    this.playerData.wins = data.wins;
+                    this.playerData.losses = data.losses;
+                    this.displayStars.textContent = '⭐ ' + data.stars;
+                    this.displayGames.textContent = '🎮 ' + data.games;
+                    this.displayWins.textContent = '🏆 ' + data.wins + 'W';
+                    this.displayLosses.textContent = '💔 ' + data.losses + 'L';
+                }
+                break;
+            case 'name_change_result':
+                if (data.success) {
+                    alert('✅ Имя изменено на ' + data.newName);
+                    if (this.playerData) {
+                        this.playerData.name = data.newName;
+                        this.displayName.textContent = data.newName;
+                    }
+                    this.showScreen('menuScreen');
+                } else {
+                    alert('❌ ' + data.message);
+                }
                 break;
             case 'lobby_created':
                 this.lobbyId = data.lobbyId;
@@ -365,7 +414,18 @@ class FootballGame {
         }
     }
     
-    // ===================== ЛОББИ =====================
+    handleChangeName() {
+        const newName = prompt('Введите новое имя:', this.playerData ? this.playerData.name : '');
+        if (!newName || newName.trim() === '') return;
+        
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({
+                type: 'change_name',
+                playerId: this.playerId,
+                newName: newName.trim()
+            }));
+        }
+    }
     
     handleCreateLobby(mode) {
         if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
@@ -503,8 +563,6 @@ class FootballGame {
         });
     }
     
-    // ===================== ИГРА =====================
-    
     startGame(data) {
         this.isRunning = true;
         this.timer = data.duration || 120;
@@ -621,6 +679,19 @@ class FootballGame {
             this.winnerMessage.textContent = '🤝 Ничья!';
         }
         this.gameOverModal.classList.add('active');
+        
+        // Отправляем обновление рейтинга
+        if (this.ws && this.ws.readyState === WebSocket.OPEN && this.playerData) {
+            const won = (this.team === 'team1' && this.score.team1 > this.score.team2) ||
+                        (this.team === 'team2' && this.score.team2 > this.score.team1);
+            this.ws.send(JSON.stringify({
+                type: 'update_player',
+                playerId: this.playerId,
+                won: won,
+                score1: this.score.team1,
+                score2: this.score.team2
+            }));
+        }
     }
     
     handleBackToMenu() {
@@ -632,8 +703,6 @@ class FootballGame {
         this.gameOverModal.classList.remove('active');
         this.showScreen('menuScreen');
     }
-    
-    // ===================== ДЕЙСТВИЯ =====================
     
     handleKick() {
         if (!this.isRunning || !this.ws || this.ws.readyState !== WebSocket.OPEN) return;
@@ -659,8 +728,6 @@ class FootballGame {
         }, 150);
     }
     
-    // ===================== CANVAS (16:9) =====================
-    
     resizeCanvas() {
         if (!this.canvas) return;
         
@@ -670,7 +737,6 @@ class FootballGame {
         const availWidth = window.innerWidth;
         const availHeight = window.innerHeight - headerHeight - controlsHeight;
         
-        // 16:9
         const aspectRatio = 16 / 9;
         let width = availWidth;
         let height = availWidth / aspectRatio;
@@ -680,9 +746,8 @@ class FootballGame {
             width = height * aspectRatio;
         }
         
-        // Базовое разрешение игрового поля (как в Brawl Stars)
         const baseWidth = 800;
-        const baseHeight = 450; // 800 / 16 * 9 = 450
+        const baseHeight = 450;
         
         const scaleX = width / baseWidth;
         const scaleY = height / baseHeight;
@@ -697,8 +762,6 @@ class FootballGame {
         
         this.fieldWidth = baseWidth;
         this.fieldHeight = baseHeight;
-        
-        // Сохраняем масштаб для рендера
         this._scale = scale;
         this._baseWidth = baseWidth;
         this._baseHeight = baseHeight;
@@ -717,11 +780,9 @@ class FootballGame {
         
         ctx.clearRect(0, 0, w, h);
         
-        // Масштабируем от базового размера 800x450
         const scaleX = w / this._baseWidth;
         const scaleY = h / this._baseHeight;
         
-        // --- ПОЛЕ ---
         const gradient = ctx.createLinearGradient(0, 0, 0, h);
         gradient.addColorStop(0, '#2d8a4e');
         gradient.addColorStop(0.5, '#3ca55c');
@@ -729,7 +790,6 @@ class FootballGame {
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, w, h);
         
-        // Полосы
         ctx.strokeStyle = 'rgba(255,255,255,0.08)';
         ctx.lineWidth = 1;
         for (let i = 0; i < h; i += 40) {
@@ -739,34 +799,28 @@ class FootballGame {
             ctx.stroke();
         }
         
-        // --- РАЗМЕТКА (масштабируем от 800x450) ---
         ctx.strokeStyle = 'rgba(255,255,255,0.4)';
         ctx.lineWidth = 2;
         
-        // Центральная линия
         ctx.beginPath();
         ctx.moveTo(400 * scaleX, 20 * scaleY);
         ctx.lineTo(400 * scaleX, (450 - 20) * scaleY);
         ctx.stroke();
         
-        // Центральный круг
         ctx.beginPath();
         ctx.arc(400 * scaleX, 225 * scaleY, 40 * scaleX, 0, Math.PI * 2);
         ctx.stroke();
         
-        // Центральная точка
         ctx.beginPath();
         ctx.arc(400 * scaleX, 225 * scaleY, 4 * scaleX, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(255,255,255,0.4)';
         ctx.fill();
         
-        // --- ВОРОТА ---
         const goalWidth = 50 * scaleX;
         const goalHeight = 100 * scaleY;
         const goalY = 225 * scaleY - goalHeight / 2;
         const goalDepth = 15 * scaleX;
         
-        // Левые ворота
         ctx.strokeStyle = 'rgba(255,255,255,0.7)';
         ctx.lineWidth = 3 * scaleX;
         ctx.beginPath();
@@ -776,7 +830,6 @@ class FootballGame {
         ctx.lineTo(0, goalY + goalHeight);
         ctx.stroke();
         
-        // Сетка ворот (левая)
         ctx.strokeStyle = 'rgba(255,255,255,0.15)';
         ctx.lineWidth = 1 * scaleX;
         const gridSize = 8 * scaleX;
@@ -793,7 +846,6 @@ class FootballGame {
             ctx.stroke();
         }
         
-        // Правые ворота
         ctx.strokeStyle = 'rgba(255,255,255,0.7)';
         ctx.lineWidth = 3 * scaleX;
         ctx.beginPath();
@@ -803,7 +855,6 @@ class FootballGame {
         ctx.lineTo(w, goalY + goalHeight);
         ctx.stroke();
         
-        // Сетка ворот (правая)
         ctx.strokeStyle = 'rgba(255,255,255,0.15)';
         ctx.lineWidth = 1 * scaleX;
         for (let y = goalY + 5 * scaleY; y < goalY + goalHeight - 5 * scaleY; y += gridSize) {
@@ -819,7 +870,6 @@ class FootballGame {
             ctx.stroke();
         }
         
-        // --- ШТРАФНЫЕ ---
         ctx.strokeStyle = 'rgba(255,255,255,0.25)';
         ctx.lineWidth = 2 * scaleX;
         const penaltyWidth = 80 * scaleX;
@@ -828,7 +878,6 @@ class FootballGame {
         ctx.strokeRect(0, penaltyY, penaltyWidth, penaltyHeight);
         ctx.strokeRect(w - penaltyWidth, penaltyY, penaltyWidth, penaltyHeight);
         
-        // --- МЯЧ ---
         if (this.ball && this.ball.x !== undefined) {
             const bx = this.ball.x * scaleX;
             const by = this.ball.y * scaleY;
@@ -868,7 +917,6 @@ class FootballGame {
             ctx.stroke();
         }
         
-        // --- ИГРОКИ ---
         const playersList = Object.values(this.players);
         if (playersList.length > 0) {
             playersList.forEach(player => {
@@ -932,8 +980,6 @@ class FootballGame {
             ctx.fillText('⏳ Ожидание игроков...', w/2, h/2);
         }
     }
-    
-    // ===================== FULLSCREEN =====================
     
     setupFullscreen() {
         window.addEventListener('orientationchange', () => {
@@ -1004,6 +1050,7 @@ class FootballGame {
         this.playerNameInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.handleLogin();
         });
+        this.changeNameBtn.addEventListener('click', () => this.handleChangeName());
         this.createLobbyBtn.addEventListener('click', () => this.showScreen('createLobbyScreen'));
         this.findLobbyBtn.addEventListener('click', () => this.handleFindLobbies());
         this.mode1v1Btn.addEventListener('click', () => this.handleCreateLobby('1v1'));
