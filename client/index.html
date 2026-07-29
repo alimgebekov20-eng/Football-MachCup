@@ -27,6 +27,10 @@
     <div id="menuScreen" class="screen">
         <div class="menu-container">
             <div class="player-info">
+                <div class="ovr-container">
+                    <span class="ovr-label">⭐ ОВР</span>
+                    <span class="ovr-value" id="ovrRating">0</span>
+                </div>
                 <span class="player-name" id="displayName">Игрок</span>
                 <span class="player-id" id="displayId">ID: ---</span>
                 <div class="player-stats">
@@ -45,6 +49,10 @@
                 <button id="playerBtn" class="btn-menu btn-player">
                     <span class="icon">👤</span>
                     Игрок
+                </button>
+                <button id="upgradeBtn" class="btn-menu btn-upgrade">
+                    <span class="icon">📈</span>
+                    Прокачка
                 </button>
             </div>
         </div>
@@ -91,6 +99,26 @@
             </div>
             
             <button id="backFromPlayerBottomBtn" class="btn-back">← Назад</button>
+        </div>
+    </div>
+
+    <!-- ЭКРАН ПРОКАЧКА -->
+    <div id="upgradeScreen" class="screen">
+        <div class="upgrade-container">
+            <h2>📈 Прокачка</h2>
+            
+            <div class="upgrade-buttons">
+                <button id="inventoryBtn" class="btn-menu btn-inventory">
+                    <span class="icon">🎒</span>
+                    Инвентарь
+                </button>
+                <button id="packsBtn" class="btn-menu btn-packs">
+                    <span class="icon">📦</span>
+                    Паки
+                </button>
+            </div>
+            
+            <button id="backFromUpgradeBtn" class="btn-back">← Назад</button>
         </div>
     </div>
 
