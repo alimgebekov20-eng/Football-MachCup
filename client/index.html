@@ -27,9 +27,15 @@
     <div id="menuScreen" class="screen">
         <div class="menu-container">
             <div class="player-info">
-                <div class="ovr-container">
-                    <span class="ovr-label">⭐ ОВР</span>
-                    <span class="ovr-value" id="ovrRating">0</span>
+                <div class="ovr-crystals-row">
+                    <div class="ovr-container">
+                        <span class="ovr-label">⭐ ОВР</span>
+                        <span class="ovr-value" id="ovrRating">0</span>
+                    </div>
+                    <div class="crystals-container">
+                        <span class="crystal-icon">💎</span>
+                        <span class="crystals-value" id="menuCrystals">0</span>
+                    </div>
                 </div>
                 <span class="player-name" id="displayName">Игрок</span>
                 <span class="player-id" id="displayId">ID: ---</span>
@@ -105,7 +111,13 @@
     <!-- ЭКРАН ПРОКАЧКА -->
     <div id="upgradeScreen" class="screen">
         <div class="upgrade-container">
-            <h2>📈 Прокачка</h2>
+            <div class="upgrade-header">
+                <h2>📈 Прокачка</h2>
+                <div class="crystals-display">
+                    <span class="crystal-icon">💎</span>
+                    <span id="upgradeCrystals">0</span>
+                </div>
+            </div>
             
             <div class="upgrade-buttons">
                 <button id="inventoryBtn" class="btn-menu btn-inventory">
@@ -119,6 +131,84 @@
             </div>
             
             <button id="backFromUpgradeBtn" class="btn-back">← Назад</button>
+        </div>
+    </div>
+
+    <!-- ЭКРАН ИНВЕНТАРЬ -->
+    <div id="inventoryScreen" class="screen">
+        <div class="inventory-container">
+            <h2>🎒 Инвентарь</h2>
+            
+            <div class="inventory-filters">
+                <button class="filter-btn active" data-filter="all">Все</button>
+                <button class="filter-btn" data-filter="common">🟢 Обычные</button>
+                <button class="filter-btn" data-filter="rare">🔵 Редкие</button>
+                <button class="filter-btn" data-filter="epic">🟣 Эпические</button>
+                <button class="filter-btn" data-filter="legendary">🟠 Легендарные</button>
+            </div>
+            
+            <div id="inventoryList" class="inventory-list">
+                <div class="empty-inventory">🎒 Инвентарь пуст</div>
+            </div>
+            
+            <button id="backFromInventoryBtn" class="btn-back">← Назад</button>
+        </div>
+    </div>
+
+    <!-- ЭКРАН ПАКИ -->
+    <div id="packsScreen" class="screen">
+        <div class="packs-container">
+            <div class="packs-header">
+                <h2>📦 Паки</h2>
+                <div class="crystals-display">
+                    <span class="crystal-icon">💎</span>
+                    <span id="packsCrystals">0</span>
+                </div>
+            </div>
+            
+            <div class="packs-grid">
+                <div class="pack-card common">
+                    <div class="pack-rarity">🟢 Обычный</div>
+                    <div class="pack-price">💎 25</div>
+                    <div class="pack-bonus">+2 к характеристикам</div>
+                    <button class="pack-open-btn" data-pack="common">Открыть</button>
+                    <button class="pack-preview-btn" data-pack="common">👁️ Что падает?</button>
+                </div>
+                <div class="pack-card rare">
+                    <div class="pack-rarity">🔵 Редкий</div>
+                    <div class="pack-price">💎 100</div>
+                    <div class="pack-bonus">+4 к характеристикам</div>
+                    <button class="pack-open-btn" data-pack="rare">Открыть</button>
+                    <button class="pack-preview-btn" data-pack="rare">👁️ Что падает?</button>
+                </div>
+                <div class="pack-card epic">
+                    <div class="pack-rarity">🟣 Эпический</div>
+                    <div class="pack-price">💎 200</div>
+                    <div class="pack-bonus">+7 к характеристикам</div>
+                    <button class="pack-open-btn" data-pack="epic">Открыть</button>
+                    <button class="pack-preview-btn" data-pack="epic">👁️ Что падает?</button>
+                </div>
+                <div class="pack-card legendary">
+                    <div class="pack-rarity">🟠 Легендарный</div>
+                    <div class="pack-price">💎 350</div>
+                    <div class="pack-bonus">+10 к характеристикам</div>
+                    <button class="pack-open-btn" data-pack="legendary">Открыть</button>
+                    <button class="pack-preview-btn" data-pack="legendary">👁️ Что падает?</button>
+                </div>
+            </div>
+            
+            <button id="backFromPacksBtn" class="btn-back">← Назад</button>
+        </div>
+    </div>
+
+    <!-- МОДАЛ ПРЕВЬЮ ПАКА -->
+    <div id="packPreviewModal" class="modal hidden">
+        <div class="modal-content">
+            <h2 id="previewTitle">📦 Содержимое пака</h2>
+            <div id="previewContent" class="preview-content">
+                <!-- Список скинов -->
+            </div>
+            <button id="closePreviewBtn" class="btn-primary">Закрыть</button>
         </div>
     </div>
 
