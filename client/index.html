@@ -35,7 +35,10 @@
                     <span id="displayWins">🏆 0W</span>
                     <span id="displayLosses">💔 0L</span>
                 </div>
-                <button id="changeNameBtn" class="btn-small">✏️ Сменить имя</button>
+                <div class="player-buttons">
+                    <button id="changeNameBtn" class="btn-small">✏️ Сменить имя</button>
+                    <button id="statsBtn" class="btn-small">📊 Характеристики</button>
+                </div>
             </div>
             
             <div class="menu-buttons">
@@ -111,6 +114,40 @@
         </div>
     </div>
 
+    <!-- ЭКРАН ХАРАКТЕРИСТИК -->
+    <div id="statsScreen" class="screen">
+        <div class="stats-container">
+            <h2>📊 Характеристики</h2>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-icon">🏃</span>
+                    <span class="stat-name">Скорость</span>
+                    <span class="stat-value" id="statSpeed">50</span>
+                    <div class="stat-bar"><div class="stat-bar-fill" id="statSpeedBar" style="width:50%"></div></div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-icon">💪</span>
+                    <span class="stat-name">Сила удара</span>
+                    <span class="stat-value" id="statPower">50</span>
+                    <div class="stat-bar"><div class="stat-bar-fill" id="statPowerBar" style="width:50%"></div></div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-icon">🎯</span>
+                    <span class="stat-name">Точность паса</span>
+                    <span class="stat-value" id="statPass">50</span>
+                    <div class="stat-bar"><div class="stat-bar-fill" id="statPassBar" style="width:50%"></div></div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-icon">🛡️</span>
+                    <span class="stat-name">Защита</span>
+                    <span class="stat-value" id="statDefense">50</span>
+                    <div class="stat-bar"><div class="stat-bar-fill" id="statDefenseBar" style="width:50%"></div></div>
+                </div>
+            </div>
+            <button id="backFromStatsBtn" class="btn-primary">← Назад в меню</button>
+        </div>
+    </div>
+
     <!-- ИГРОВОЙ ЭКРАН -->
     <div id="gameScreen" class="screen">
         <div class="game-header">
@@ -134,7 +171,6 @@
             <div id="joystickContainer">
                 <div id="joystickBase">
                     <div id="joystickThumb"></div>
-                    <div id="joystickDirection"></div>
                 </div>
             </div>
             
