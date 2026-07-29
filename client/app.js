@@ -35,6 +35,7 @@ class FootballGame {
         this.menuScreen = document.getElementById('menuScreen');
         this.matchesScreen = document.getElementById('matchesScreen');
         this.playerScreen = document.getElementById('playerScreen');
+        this.upgradeScreen = document.getElementById('upgradeScreen');
         this.createLobbyScreen = document.getElementById('createLobbyScreen');
         this.lobbyScreen = document.getElementById('lobbyScreen');
         this.findLobbyScreen = document.getElementById('findLobbyScreen');
@@ -50,11 +51,16 @@ class FootballGame {
         this.displayGames = document.getElementById('displayGames');
         this.displayWins = document.getElementById('displayWins');
         this.displayLosses = document.getElementById('displayLosses');
+        this.ovrElement = document.getElementById('ovrRating');
         
         this.matchesBtn = document.getElementById('matchesBtn');
         this.playerBtn = document.getElementById('playerBtn');
+        this.upgradeBtn = document.getElementById('upgradeBtn');
         this.backFromMatchesBottomBtn = document.getElementById('backFromMatchesBottomBtn');
         this.backFromPlayerBottomBtn = document.getElementById('backFromPlayerBottomBtn');
+        this.backFromUpgradeBtn = document.getElementById('backFromUpgradeBtn');
+        this.inventoryBtn = document.getElementById('inventoryBtn');
+        this.packsBtn = document.getElementById('packsBtn');
         this.playerStatsBtn = document.getElementById('playerStatsBtn');
         this.playerChangeNameBtn = document.getElementById('playerChangeNameBtn');
         
@@ -186,13 +192,24 @@ class FootballGame {
             this.displayGames.textContent = '🎮 ' + (this.playerData.games || 0);
             this.displayWins.textContent = '🏆 ' + (this.playerData.wins || 0) + 'W';
             this.displayLosses.textContent = '💔 ' + (this.playerData.losses || 0) + 'L';
+            
+            // Расчёт ОВР
+            const stats = this.playerData.stats || { speed: 50, power: 50, pass: 50, defense: 50 };
+            const speed = stats.speed || 50;
+            const power = stats.power || 50;
+            const pass = stats.pass || 50;
+            const defense = stats.defense || 50;
+            const ovr = Math.floor((speed + power + pass + defense) / 4);
+            if (this.ovrElement) {
+                this.ovrElement.textContent = ovr;
+            }
         }
     }
     
     showScreen(screenId) {
         const screens = [
             'loginScreen', 'menuScreen', 'matchesScreen', 'playerScreen',
-            'createLobbyScreen', 'lobbyScreen', 'findLobbyScreen',
+            'upgradeScreen', 'createLobbyScreen', 'lobbyScreen', 'findLobbyScreen',
             'statsScreen', 'gameScreen', 'freePlayScreen'
         ];
         screens.forEach(id => {
@@ -236,7 +253,8 @@ class FootballGame {
                 stars: 100,
                 games: 0,
                 wins: 0,
-                losses: 0
+                losses: 0,
+                stats: { speed: 50, power: 50, pass: 50, defense: 50 }
             };
             this.savePlayerData();
         }
@@ -1462,7 +1480,7 @@ class FootballGame {
         }
         if (this.playerNameInput) {
             this.playerNameInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') this.handleLogin();
+                if (e.key === 'Enter') this.handleLogin());
             });
         }
         
@@ -1472,6 +1490,9 @@ class FootballGame {
         }
         if (this.playerBtn) {
             this.playerBtn.addEventListener('click', () => this.showScreen('playerScreen'));
+        }
+        if (this.upgradeBtn) {
+            this.upgradeBtn.addEventListener('click', () => this.showScreen('upgradeScreen'));
         }
         
         // Матчи
@@ -1497,6 +1518,21 @@ class FootballGame {
         }
         if (this.playerChangeNameBtn) {
             this.playerChangeNameBtn.addEventListener('click', () => this.handleChangeName());
+        }
+        
+        // Прокачка
+        if (this.backFromUpgradeBtn) {
+            this.backFromUpgradeBtn.addEventListener('click', () => this.showScreen('menuScreen'));
+        }
+        if (this.inventoryBtn) {
+            this.inventoryBtn.addEventListener('click', () => {
+                alert('🎒 Инвентарь — скоро!');
+            });
+        }
+        if (this.packsBtn) {
+            this.packsBtn.addEventListener('click', () => {
+                alert('📦 Паки — скоро!');
+            });
         }
         
         // Создание лобби
@@ -1582,14 +1618,6 @@ class FootballGame {
                 this.resizeFreeCanvas();
             }, 300);
         });
-        // Характеристики — ПРИНУДИТЕЛЬНЫЙ ВЫХОД
-        const statsBackBtn = document.getElementById('backFromStatsBtn');
-        if (statsBackBtn) {
-            statsBackBtn.addEventListener('click', () => {
-                console.log('🔙 Выход из характеристик');
-                this.showScreen('playerScreen');
-            });
-        }
     }
     
     handleKick() {
