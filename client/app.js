@@ -144,6 +144,11 @@ class FootballGame {
         if (saved) {
             try {
                 this.playerData = JSON.parse(saved);
+                // ✅ Если stats нет — создаём
+                if (!this.playerData.stats) {
+                    this.playerData.stats = { speed: 50, power: 50, pass: 50, defense: 50 };
+                    this.savePlayerData();
+                }
                 console.log('📂 Загружены данные игрока:', this.playerData);
             } catch (e) {
                 console.error('Ошибка загрузки данных:', e);
@@ -193,7 +198,7 @@ class FootballGame {
             this.displayWins.textContent = '🏆 ' + (this.playerData.wins || 0) + 'W';
             this.displayLosses.textContent = '💔 ' + (this.playerData.losses || 0) + 'L';
             
-            // Расчёт ОВР
+            // ✅ Расчёт ОВР с проверкой
             const stats = this.playerData.stats || { speed: 50, power: 50, pass: 50, defense: 50 };
             const speed = stats.speed || 50;
             const power = stats.power || 50;
@@ -1480,7 +1485,7 @@ class FootballGame {
         }
         if (this.playerNameInput) {
             this.playerNameInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') this.handleLogin());
+                if (e.key === 'Enter') this.handleLogin();
             });
         }
         
@@ -1492,7 +1497,12 @@ class FootballGame {
             this.playerBtn.addEventListener('click', () => this.showScreen('playerScreen'));
         }
         if (this.upgradeBtn) {
-            this.upgradeBtn.addEventListener('click', () => this.showScreen('upgradeScreen'));
+            this.upgradeBtn.addEventListener('click', () => {
+                console.log('📈 Открываем прокачку');
+                this.showScreen('upgradeScreen');
+            });
+        } else {
+            console.error('❌ Кнопка upgradeBtn не найдена');
         }
         
         // Матчи
