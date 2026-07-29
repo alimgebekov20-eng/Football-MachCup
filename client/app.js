@@ -76,6 +76,10 @@ class FootballGame {
         this._moveY = 300;
         this._joystickActive = false;
         
+        // ========== ЗАГРУЗКА ИЗ localStorage ==========
+        this.loadPlayerData();
+        // ============================================
+        
         this.setupEventListeners();
         this.setupFullscreen();
         this.setupJoystick();
@@ -84,6 +88,64 @@ class FootballGame {
         
         setInterval(() => this.sendMove(), 50);
     }
+    
+    // ========== РАБОТА С localStorage ==========
+    loadPlayerData() {
+        const saved = localStorage.getItem('football_player');
+        if (saved) {
+            try {
+                this.playerData = JSON.parse(saved);
+                console.log('📂 Загружены данные игрока:', this.playerData);
+            } catch (e) {
+                console.error('Ошибка загрузки данных:', e);
+            }
+        }
+    }
+    
+    savePlayerData() {
+        if (this.playerData) {
+            localStorage.setItem('football_player', JSON.stringify(this.playerData));
+            console.log('💾 Сохранены данные игрока:', this.playerData);
+        }
+    }
+    
+    updatePlayerStats(won, score1, score2) {
+        if (!this.playerData) return;
+        
+        this.playerData.games = (this.playerData.games || 0) + 1;
+        if (won) {
+            this.playerData.wins = (this.playerData.wins || 0) + 1;
+        } else {
+            this.playerData.losses = (this.playerData.losses || 0) + 1;
+        }
+        
+        const goalDiff = Math.abs(score1 - score2);
+        let starsChange = 0;
+        
+        if (won) {
+            starsChange = 50 + (score1 - score2) * 10;
+        } else {
+            starsChange = -30 - (score2 - score1) * 5;
+        }
+        
+        const newStars = Math.max(0, (this.playerData.stars || 100) + starsChange);
+        this.playerData.stars = Math.round(newStars);
+        
+        this.savePlayerData();
+        this.updateUIStats();
+        
+        console.log(`⭐ Изменение рейтинга: ${starsChange} → ${this.playerData.stars}`);
+    }
+    
+    updateUIStats() {
+        if (this.playerData) {
+            this.displayStars.textContent = '⭐ ' + this.playerData.stars;
+            this.displayGames.textContent = '🎮 ' + (this.playerData.games || 0);
+            this.displayWins.textContent = '🏆 ' + (this.playerData.wins || 0) + 'W';
+            this.displayLosses.textContent = '💔 ' + (this.playerData.losses || 0) + 'L';
+        }
+    }
+    // ============================================
     
     sendMove() {
         if (!this.isRunning || !this.ws || this.ws.readyState !== WebSocket.OPEN) return;
@@ -248,11 +310,8 @@ class FootballGame {
             }
         });
         
-        if (screenId === 'menuScreen' && this.playerData) {
-            this.displayStars.textContent = '⭐ ' + this.playerData.stars;
-            this.displayGames.textContent = '🎮 ' + this.playerData.games;
-            this.displayWins.textContent = '🏆 ' + this.playerData.wins + 'W';
-            this.displayLosses.textContent = '💔 ' + this.playerData.losses + 'L';
+        if (screenId === 'menuScreen') {
+            this.updateUIStats();
         }
     }
     
@@ -269,14 +328,31 @@ class FootballGame {
         }
         
         this.playerName = name;
+        
+        // Сохраняем имя в localStorage
+        if (this.playerData) {
+            this.playerData.name = name;
+            this.savePlayerData();
+        } else {
+            this.playerData = {
+                id: 'player_' + Date.now(),
+                name: name,
+                stars: 100,
+                games: 0,
+                wins: 0,
+                losses: 0
+            };
+            this.savePlayerData();
+        }
+        
         this.connectWebSocket();
         
         setTimeout(() => {
             if (this.ws && this.ws.readyState === WebSocket.OPEN) {
                 this.ws.send(JSON.stringify({
-                    type: 'get_player',
-                    playerId: this.playerId,
-                    playerName: this.playerName
+                    type: 'auth',
+                    playerName: this.playerName,
+                    playerId: this.playerData.id
                 }));
             }
         }, 500);
@@ -290,10 +366,6 @@ class FootballGame {
         
         this.ws.onopen = () => {
             console.log('WebSocket подключен');
-            this.ws.send(JSON.stringify({
-                type: 'auth',
-                playerName: this.playerName
-            }));
         };
         
         this.ws.onmessage = (event) => {
@@ -326,42 +398,15 @@ class FootballGame {
                 this.playerId = data.playerId;
                 this.displayName.textContent = data.playerName;
                 this.displayId.textContent = `ID: ${data.playerId.slice(0, 8)}`;
+                if (this.playerData) {
+                    this.playerData.id = data.playerId;
+                    this.savePlayerData();
+                }
+                this.updateUIStats();
+                this.showScreen('menuScreen');
                 break;
             case 'auth_error':
                 alert(data.message);
-                break;
-            case 'player_data':
-                this.playerData = data.data;
-                this.displayName.textContent = data.data.name;
-                this.displayStars.textContent = '⭐ ' + data.data.stars;
-                this.displayGames.textContent = '🎮 ' + data.data.games;
-                this.displayWins.textContent = '🏆 ' + data.data.wins + 'W';
-                this.displayLosses.textContent = '💔 ' + data.data.losses + 'L';
-                this.showScreen('menuScreen');
-                break;
-            case 'rating_updated':
-                if (this.playerData) {
-                    this.playerData.stars = data.stars;
-                    this.playerData.games = data.games;
-                    this.playerData.wins = data.wins;
-                    this.playerData.losses = data.losses;
-                    this.displayStars.textContent = '⭐ ' + data.stars;
-                    this.displayGames.textContent = '🎮 ' + data.games;
-                    this.displayWins.textContent = '🏆 ' + data.wins + 'W';
-                    this.displayLosses.textContent = '💔 ' + data.losses + 'L';
-                }
-                break;
-            case 'name_change_result':
-                if (data.success) {
-                    alert('✅ Имя изменено на ' + data.newName);
-                    if (this.playerData) {
-                        this.playerData.name = data.newName;
-                        this.displayName.textContent = data.newName;
-                    }
-                    this.showScreen('menuScreen');
-                } else {
-                    alert('❌ ' + data.message);
-                }
                 break;
             case 'lobby_created':
                 this.lobbyId = data.lobbyId;
@@ -418,12 +463,11 @@ class FootballGame {
         const newName = prompt('Введите новое имя:', this.playerData ? this.playerData.name : '');
         if (!newName || newName.trim() === '') return;
         
-        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-            this.ws.send(JSON.stringify({
-                type: 'change_name',
-                playerId: this.playerId,
-                newName: newName.trim()
-            }));
+        if (this.playerData) {
+            this.playerData.name = newName.trim();
+            this.savePlayerData();
+            this.displayName.textContent = newName.trim();
+            alert('✅ Имя изменено на ' + newName.trim());
         }
     }
     
@@ -668,9 +712,15 @@ class FootballGame {
         }
     }
     
+    // ========== ИСПРАВЛЕННАЯ showGameOver ==========
     showGameOver() {
         this.finalTeam1.textContent = this.score.team1;
         this.finalTeam2.textContent = this.score.team2;
+        
+        let won = false;
+        if (this.team === 'team1' && this.score.team1 > this.score.team2) won = true;
+        if (this.team === 'team2' && this.score.team2 > this.score.team1) won = true;
+        
         if (this.score.team1 > this.score.team2) {
             this.winnerMessage.textContent = '🏆 Победа команды 1!';
         } else if (this.score.team2 > this.score.team1) {
@@ -678,31 +728,44 @@ class FootballGame {
         } else {
             this.winnerMessage.textContent = '🤝 Ничья!';
         }
+        
+        // Обновляем статистику
+        if (this.score.team1 !== this.score.team2) {
+            this.updatePlayerStats(won, this.score.team1, this.score.team2);
+        }
+        
         this.gameOverModal.classList.add('active');
         
-        // Отправляем обновление рейтинга
-        if (this.ws && this.ws.readyState === WebSocket.OPEN && this.playerData) {
-            const won = (this.team === 'team1' && this.score.team1 > this.score.team2) ||
-                        (this.team === 'team2' && this.score.team2 > this.score.team1);
-            this.ws.send(JSON.stringify({
-                type: 'update_player',
-                playerId: this.playerId,
-                won: won,
-                score1: this.score.team1,
-                score2: this.score.team2
-            }));
-        }
+        // Автоматический переход в меню через 3 секунды
+        setTimeout(() => {
+            this.handleBackToMenu();
+        }, 3000);
     }
+    // ================================================
     
+    // ========== ИСПРАВЛЕННЫЙ handleBackToMenu ==========
     handleBackToMenu() {
+        // Останавливаем все интервалы
         this.isRunning = false;
         this._hasReceivedState = false;
         this._isStopped = false;
         this._moveX = 400;
         this._moveY = 300;
+        
+        // Закрываем модалку
         this.gameOverModal.classList.remove('active');
+        
+        // Сбрасываем WebSocket соединение для игры
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            // Не закрываем сокет, просто сбрасываем состояние
+        }
+        
+        // Переходим в меню
         this.showScreen('menuScreen');
+        this.updateUIStats();
+        console.log('🔙 Возврат в меню');
     }
+    // ================================================
     
     handleKick() {
         if (!this.isRunning || !this.ws || this.ws.readyState !== WebSocket.OPEN) return;
