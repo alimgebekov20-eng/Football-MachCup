@@ -270,6 +270,36 @@ body {
     gap: 15px;
 }
 
+/* ===== ОВР РЕЙТИНГ ===== */
+.ovr-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: linear-gradient(135deg, rgba(79,172,254,0.15), rgba(245,87,108,0.15));
+    padding: 6px 16px;
+    border-radius: 20px;
+    margin-bottom: 10px;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+
+.ovr-label {
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.6);
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
+.ovr-value {
+    font-size: 1.6rem;
+    font-weight: 900;
+    background: linear-gradient(45deg, #f093fb, #f5576c, #4facfe);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+}
+
 /* ===== ЭКРАН МАТЧИ ===== */
 .matches-container {
     text-align: center;
@@ -310,6 +340,26 @@ body {
     gap: 15px;
 }
 
+/* ===== ЭКРАН ПРОКАЧКА ===== */
+.upgrade-container {
+    text-align: center;
+    padding: 20px;
+    width: 90%;
+    max-width: 400px;
+}
+
+.upgrade-container h2 {
+    font-size: 1.8rem;
+    margin-bottom: 25px;
+    color: white;
+}
+
+.upgrade-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
 /* ===== КНОПКИ МЕНЮ ===== */
 .btn-menu {
     padding: 20px;
@@ -340,6 +390,11 @@ body {
     box-shadow: 0 10px 30px rgba(79,172,254,0.3);
 }
 
+.btn-upgrade {
+    background: linear-gradient(45deg, #f7971e, #ffd200);
+    box-shadow: 0 10px 30px rgba(247,151,30,0.3);
+}
+
 .btn-lobby {
     background: linear-gradient(45deg, #f093fb, #f5576c);
     box-shadow: 0 10px 30px rgba(245,87,108,0.3);
@@ -361,6 +416,16 @@ body {
 }
 
 .btn-rename {
+    background: linear-gradient(45deg, #43e97b, #38f9d7);
+    box-shadow: 0 10px 30px rgba(67,233,123,0.3);
+}
+
+.btn-inventory {
+    background: linear-gradient(45deg, #a18cd1, #fbc2eb);
+    box-shadow: 0 10px 30px rgba(161,140,209,0.3);
+}
+
+.btn-packs {
     background: linear-gradient(45deg, #43e97b, #38f9d7);
     box-shadow: 0 10px 30px rgba(67,233,123,0.3);
 }
@@ -1005,7 +1070,7 @@ body {
         padding: 20px;
     }
     
-    .matches-container h2, .player-container h2, .stats-container h2, .create-lobby-container h2 {
+    .matches-container h2, .player-container h2, .upgrade-container h2, .stats-container h2, .create-lobby-container h2 {
         font-size: 1.5rem;
     }
 }
