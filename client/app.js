@@ -16,6 +16,7 @@ class FootballGame {
         this._hasReceivedState = false;
         this._isStopped = false;
         this.playerData = null;
+        this._gameEnded = false;
         
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
@@ -25,6 +26,7 @@ class FootballGame {
         this.createLobbyScreen = document.getElementById('createLobbyScreen');
         this.lobbyScreen = document.getElementById('lobbyScreen');
         this.findLobbyScreen = document.getElementById('findLobbyScreen');
+        this.statsScreen = document.getElementById('statsScreen');
         this.gameScreen = document.getElementById('gameScreen');
         
         this.playerNameInput = document.getElementById('playerName');
@@ -36,6 +38,8 @@ class FootballGame {
         this.displayWins = document.getElementById('displayWins');
         this.displayLosses = document.getElementById('displayLosses');
         this.changeNameBtn = document.getElementById('changeNameBtn');
+        this.statsBtn = document.getElementById('statsBtn');
+        this.backFromStatsBtn = document.getElementById('backFromStatsBtn');
         
         this.createLobbyBtn = document.getElementById('createLobbyBtn');
         this.findLobbyBtn = document.getElementById('findLobbyBtn');
@@ -76,9 +80,8 @@ class FootballGame {
         this._moveY = 300;
         this._joystickActive = false;
         
-        // ========== ЗАГРУЗКА ИЗ localStorage ==========
+        // Загрузка из localStorage
         this.loadPlayerData();
-        // ============================================
         
         this.setupEventListeners();
         this.setupFullscreen();
@@ -87,6 +90,13 @@ class FootballGame {
         this.gameLoop();
         
         setInterval(() => this.sendMove(), 50);
+        
+        // Автовход
+        if (this.playerData && this.playerData.name) {
+            this.playerName = this.playerData.name;
+            this.playerNameInput.value = this.playerData.name;
+            setTimeout(() => this.handleLogin(), 300);
+        }
     }
     
     // ========== РАБОТА С localStorage ==========
@@ -300,7 +310,7 @@ class FootballGame {
     }
     
     showScreen(screenId) {
-        const screens = ['loginScreen', 'menuScreen', 'createLobbyScreen', 'lobbyScreen', 'findLobbyScreen', 'gameScreen'];
+        const screens = ['loginScreen', 'menuScreen', 'createLobbyScreen', 'lobbyScreen', 'findLobbyScreen', 'statsScreen', 'gameScreen'];
         screens.forEach(id => {
             const el = document.getElementById(id);
             if (id === screenId) {
@@ -329,7 +339,6 @@ class FootballGame {
         
         this.playerName = name;
         
-        // Сохраняем имя в localStorage
         if (this.playerData) {
             this.playerData.name = name;
             this.savePlayerData();
@@ -608,6 +617,7 @@ class FootballGame {
     }
     
     startGame(data) {
+        this._gameEnded = false;
         this.isRunning = true;
         this.timer = data.duration || 120;
         this.team = data.team;
@@ -712,8 +722,10 @@ class FootballGame {
         }
     }
     
-    // ========== ИСПРАВЛЕННАЯ showGameOver ==========
     showGameOver() {
+        if (this._gameEnded) return;
+        this._gameEnded = true;
+        
         this.finalTeam1.textContent = this.score.team1;
         this.finalTeam2.textContent = this.score.team2;
         
@@ -729,43 +741,36 @@ class FootballGame {
             this.winnerMessage.textContent = '🤝 Ничья!';
         }
         
-        // Обновляем статистику
         if (this.score.team1 !== this.score.team2) {
             this.updatePlayerStats(won, this.score.team1, this.score.team2);
         }
         
         this.gameOverModal.classList.add('active');
         
-        // Автоматический переход в меню через 3 секунды
+        // Автоматический переход через 3 секунды
         setTimeout(() => {
             this.handleBackToMenu();
         }, 3000);
     }
-    // ================================================
     
-    // ========== ИСПРАВЛЕННЫЙ handleBackToMenu ==========
     handleBackToMenu() {
-        // Останавливаем все интервалы
         this.isRunning = false;
         this._hasReceivedState = false;
         this._isStopped = false;
         this._moveX = 400;
         this._moveY = 300;
-        
-        // Закрываем модалку
+        this._gameEnded = false;
         this.gameOverModal.classList.remove('active');
         
-        // Сбрасываем WebSocket соединение для игры
-        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-            // Не закрываем сокет, просто сбрасываем состояние
-        }
+        // Сброс состояния игры
+        this.players = {};
+        this.ball = {};
+        this.score = { team1: 0, team2: 0 };
         
-        // Переходим в меню
         this.showScreen('menuScreen');
         this.updateUIStats();
         console.log('🔙 Возврат в меню');
     }
-    // ================================================
     
     handleKick() {
         if (!this.isRunning || !this.ws || this.ws.readyState !== WebSocket.OPEN) return;
@@ -1114,6 +1119,8 @@ class FootballGame {
             if (e.key === 'Enter') this.handleLogin();
         });
         this.changeNameBtn.addEventListener('click', () => this.handleChangeName());
+        this.statsBtn.addEventListener('click', () => this.showScreen('statsScreen'));
+        this.backFromStatsBtn.addEventListener('click', () => this.showScreen('menuScreen'));
         this.createLobbyBtn.addEventListener('click', () => this.showScreen('createLobbyScreen'));
         this.findLobbyBtn.addEventListener('click', () => this.handleFindLobbies());
         this.mode1v1Btn.addEventListener('click', () => this.handleCreateLobby('1v1'));
