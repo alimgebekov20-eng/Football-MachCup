@@ -54,9 +54,8 @@ class FootballGame {
         
         this.matchesBtn = document.getElementById('matchesBtn');
         this.playerBtn = document.getElementById('playerBtn');
-        this.backFromMatchesBtn = document.getElementById('backFromMatchesBtn');
+        // ❌ УДАЛЕНЫ: this.backFromMatchesBtn, this.backFromPlayerBtn
         this.backFromMatchesBottomBtn = document.getElementById('backFromMatchesBottomBtn');
-        this.backFromPlayerBtn = document.getElementById('backFromPlayerBtn');
         this.backFromPlayerBottomBtn = document.getElementById('backFromPlayerBottomBtn');
         this.playerStatsBtn = document.getElementById('playerStatsBtn');
         this.playerChangeNameBtn = document.getElementById('playerChangeNameBtn');
@@ -126,11 +125,10 @@ class FootballGame {
         setInterval(() => this.sendMove(), 50);
         setInterval(() => this.freePlayUpdate(), 30);
         
-        // ✅ АВТОВХОД — СРАЗУ ПОСЛЕ ЗАГРУЗКИ
+        // Автовход
         if (this.playerData && this.playerData.name) {
             this.playerName = this.playerData.name;
             this.playerNameInput.value = this.playerData.name;
-            // Небольшая задержка для инициализации WebSocket
             setTimeout(() => {
                 this.handleLogin();
                 this._autoLoginDone = true;
@@ -247,7 +245,6 @@ class FootballGame {
             this.savePlayerData();
         }
         
-        // Если WebSocket ещё не создан или закрыт — создаём
         if (!this.ws || this.ws.readyState === WebSocket.CLOSED) {
             this.connectWebSocket();
         }
@@ -1471,15 +1468,13 @@ class FootballGame {
         this.matchesBtn.addEventListener('click', () => this.showScreen('matchesScreen'));
         this.playerBtn.addEventListener('click', () => this.showScreen('playerScreen'));
         
-        // Матчи — УБИРАЕМ ЛИШНИЕ СТРЕЛКИ
-        this.backFromMatchesBtn.style.display = 'none';
+        // Матчи
         this.backFromMatchesBottomBtn.addEventListener('click', () => this.showScreen('menuScreen'));
         this.createLobbyBtn.addEventListener('click', () => this.showScreen('createLobbyScreen'));
         this.findLobbyBtn.addEventListener('click', () => this.handleFindLobbies());
         this.freePlayBtn.addEventListener('click', () => this.startFreePlay());
         
-        // Игрок — УБИРАЕМ ЛИШНИЕ СТРЕЛКИ
-        this.backFromPlayerBtn.style.display = 'none';
+        // Игрок
         this.backFromPlayerBottomBtn.addEventListener('click', () => this.showScreen('menuScreen'));
         this.playerStatsBtn.addEventListener('click', () => this.showScreen('statsScreen'));
         this.playerChangeNameBtn.addEventListener('click', () => this.handleChangeName());
@@ -1495,7 +1490,6 @@ class FootballGame {
         this.backFromFindBtn.addEventListener('click', () => this.showScreen('matchesScreen'));
         this.refreshLobbiesBtn.addEventListener('click', () => this.handleFindLobbies());
         
-        // Характеристики — ИСПРАВЛЯЕМ ВЫХОД
         this.backFromStatsBtn.addEventListener('click', () => this.showScreen('playerScreen'));
         
         this.exitFreePlayBtn.addEventListener('click', () => this.stopFreePlay());
