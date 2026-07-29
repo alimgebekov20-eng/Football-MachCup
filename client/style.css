@@ -515,7 +515,7 @@ body {
     border-radius: 20px;
     background: rgba(255,255,255,0.05);
     color: rgba(255,255,255,0.5);
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     cursor: pointer;
     transition: all 0.3s;
 }
@@ -547,23 +547,50 @@ body {
     background: rgba(255,255,255,0.03);
     border-radius: 12px;
     border-left: 4px solid;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.inventory-item:active {
+    transform: scale(0.97);
 }
 
 .inventory-item .item-name {
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
 }
 
 .inventory-item .item-rarity {
-    font-size: 0.65rem;
+    font-size: 0.6rem;
     padding: 2px 10px;
     border-radius: 12px;
     background: rgba(255,255,255,0.05);
 }
 
 .inventory-item .item-bonus {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: #4facfe;
+}
+
+.inventory-item .item-equip-btn {
+    padding: 4px 12px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    background: rgba(79,172,254,0.2);
+    color: #4facfe;
+}
+
+.inventory-item .item-equip-btn:active {
+    transform: scale(0.9);
+}
+
+.inventory-item .item-equip-btn.equipped {
+    background: rgba(74,222,128,0.2);
+    color: #4ade80;
 }
 
 .empty-inventory {
@@ -577,6 +604,7 @@ body {
 .rarity-rare { border-left-color: #60a5fa; }
 .rarity-epic { border-left-color: #a78bfa; }
 .rarity-legendary { border-left-color: #fbbf24; }
+.rarity-mythic { border-left-color: #f472b6; }
 
 /* ===== ПАКИ ===== */
 .packs-container {
@@ -621,6 +649,7 @@ body {
 .pack-card.rare { border-color: rgba(96,165,250,0.3); }
 .pack-card.epic { border-color: rgba(167,139,250,0.3); }
 .pack-card.legendary { border-color: rgba(251,191,36,0.3); }
+.pack-card.mythic { border-color: rgba(244,114,182,0.3); }
 
 .pack-rarity {
     font-size: 0.75rem;
@@ -680,6 +709,36 @@ body {
     transform: scale(0.95);
 }
 
+/* ===== РЕЗУЛЬТАТ ОТКРЫТИЯ ===== */
+.pack-result {
+    text-align: center;
+    padding: 40px 30px;
+}
+
+.result-rarity {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+
+.result-name {
+    font-size: 2.2rem;
+    font-weight: 900;
+    margin-bottom: 10px;
+    color: white;
+}
+
+.result-bonus {
+    font-size: 1.2rem;
+    color: #4facfe;
+    margin-bottom: 5px;
+}
+
+.result-stat {
+    font-size: 1rem;
+    color: rgba(255,255,255,0.5);
+}
+
 /* ===== ПРЕВЬЮ ПАКА ===== */
 .preview-content {
     display: flex;
@@ -708,7 +767,7 @@ body {
     color: #4facfe;
 }
 
-/* ===== СОЗДАНИЕ ЛОББИ ===== */
+/* ===== ОСТАЛЬНЫЕ ЭКРАНЫ ===== */
 .create-lobby-container {
     text-align: center;
     padding: 20px;
@@ -762,7 +821,6 @@ body {
     color: rgba(255,255,255,0.5);
 }
 
-/* ===== ЛОББИ ===== */
 .lobby-container {
     padding: 20px;
     width: 95%;
@@ -878,7 +936,6 @@ body {
     color: #4facfe;
 }
 
-/* ===== ПОИСК ЛОББИ ===== */
 .find-lobby-container {
     padding: 20px;
     width: 95%;
@@ -958,7 +1015,6 @@ body {
     margin-bottom: 10px;
 }
 
-/* ===== ХАРАКТЕРИСТИКИ ===== */
 .stats-container {
     padding: 30px;
     width: 95%;
@@ -1275,43 +1331,21 @@ body {
 }
 
 /* ===== SCROLLBAR ===== */
-.lobbies-list::-webkit-scrollbar {
-    width: 4px;
-}
-
-.lobbies-list::-webkit-scrollbar-track {
-    background: rgba(255,255,255,0.05);
-    border-radius: 10px;
-}
-
-.lobbies-list::-webkit-scrollbar-thumb {
-    background: rgba(79,172,254,0.3);
-    border-radius: 10px;
-}
-
-.inventory-list::-webkit-scrollbar {
-    width: 4px;
-}
-
-.inventory-list::-webkit-scrollbar-track {
-    background: rgba(255,255,255,0.05);
-    border-radius: 10px;
-}
-
-.inventory-list::-webkit-scrollbar-thumb {
-    background: rgba(79,172,254,0.3);
-    border-radius: 10px;
-}
-
+.lobbies-list::-webkit-scrollbar,
+.inventory-list::-webkit-scrollbar,
 .preview-content::-webkit-scrollbar {
     width: 4px;
 }
 
+.lobbies-list::-webkit-scrollbar-track,
+.inventory-list::-webkit-scrollbar-track,
 .preview-content::-webkit-scrollbar-track {
     background: rgba(255,255,255,0.05);
     border-radius: 10px;
 }
 
+.lobbies-list::-webkit-scrollbar-thumb,
+.inventory-list::-webkit-scrollbar-thumb,
 .preview-content::-webkit-scrollbar-thumb {
     background: rgba(79,172,254,0.3);
     border-radius: 10px;
@@ -1401,6 +1435,10 @@ body {
     
     .crystals-value {
         font-size: 0.9rem;
+    }
+    
+    .result-name {
+        font-size: 1.8rem;
     }
 }
 
