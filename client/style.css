@@ -200,6 +200,46 @@ body {
     transform: scale(0.9);
 }
 
+.btn-back-header {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: white;
+    font-size: 1.5rem;
+    padding: 4px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+    z-index: 10;
+}
+
+.btn-back-header:active {
+    transform: scale(0.9);
+    background: rgba(255,255,255,0.1);
+}
+
+.btn-exit {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: rgba(255,0,0,0.2);
+    border: 1px solid rgba(255,0,0,0.3);
+    color: #ff6b6b;
+    font-size: 0.9rem;
+    padding: 6px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+    z-index: 10;
+}
+
+.btn-exit:active {
+    transform: scale(0.9);
+    background: rgba(255,0,0,0.3);
+}
+
 /* ===== ГЛАВНОЕ МЕНЮ ===== */
 .menu-container {
     text-align: center;
@@ -244,36 +284,65 @@ body {
     border-radius: 12px;
 }
 
-.player-buttons {
-    display: flex;
-    gap: 8px;
-    justify-content: center;
-    margin-top: 8px;
-    flex-wrap: wrap;
-}
-
-.player-buttons .btn-small {
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.1);
-    color: white;
-    padding: 4px 12px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 0.8rem;
-    transition: all 0.3s;
-}
-
-.player-buttons .btn-small:active {
-    transform: scale(0.95);
-    background: rgba(255,255,255,0.1);
-}
-
 .menu-buttons {
     display: flex;
     flex-direction: column;
     gap: 15px;
 }
 
+/* ===== ЭКРАН МАТЧИ ===== */
+.matches-container {
+    text-align: center;
+    padding: 20px;
+    width: 90%;
+    max-width: 400px;
+}
+
+.matches-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+/* ===== ЭКРАН ИГРОК ===== */
+.player-container {
+    text-align: center;
+    padding: 20px;
+    width: 90%;
+    max-width: 400px;
+}
+
+.player-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+/* ===== ШАПКА ЭКРАНА ===== */
+.screen-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.screen-header h2 {
+    font-size: 1.6rem;
+    color: white;
+}
+
+.screen-header .btn-back-header {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* ===== КНОПКИ МЕНЮ ===== */
 .btn-menu {
     padding: 20px;
     border: none;
@@ -293,6 +362,16 @@ body {
     transform: scale(0.95);
 }
 
+.btn-matches {
+    background: linear-gradient(45deg, #f093fb, #f5576c);
+    box-shadow: 0 10px 30px rgba(245,87,108,0.3);
+}
+
+.btn-player {
+    background: linear-gradient(45deg, #4facfe, #00f2fe);
+    box-shadow: 0 10px 30px rgba(79,172,254,0.3);
+}
+
 .btn-lobby {
     background: linear-gradient(45deg, #f093fb, #f5576c);
     box-shadow: 0 10px 30px rgba(245,87,108,0.3);
@@ -301,6 +380,21 @@ body {
 .btn-find {
     background: linear-gradient(45deg, #4facfe, #00f2fe);
     box-shadow: 0 10px 30px rgba(79,172,254,0.3);
+}
+
+.btn-freeplay {
+    background: linear-gradient(45deg, #f7971e, #ffd200);
+    box-shadow: 0 10px 30px rgba(247,151,30,0.3);
+}
+
+.btn-stats {
+    background: linear-gradient(45deg, #a18cd1, #fbc2eb);
+    box-shadow: 0 10px 30px rgba(161,140,209,0.3);
+}
+
+.btn-rename {
+    background: linear-gradient(45deg, #43e97b, #38f9d7);
+    box-shadow: 0 10px 30px rgba(67,233,123,0.3);
 }
 
 .btn-menu .icon {
@@ -315,17 +409,11 @@ body {
     max-width: 400px;
 }
 
-.create-lobby-container h2 {
-    font-size: 1.8rem;
-    margin-bottom: 30px;
-    color: rgba(255,255,255,0.9);
-}
-
 .mode-buttons {
     display: flex;
     flex-direction: column;
     gap: 15px;
-    margin-bottom: 20px;
+    margin-top: 20px;
 }
 
 .btn-mode {
@@ -373,37 +461,27 @@ body {
     border: 1px solid rgba(255,255,255,0.1);
 }
 
-.lobby-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-}
-
-.lobby-header h2 {
-    font-size: 1.5rem;
-    color: white;
-}
-
 .lobby-code-display {
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
+    gap: 12px;
     background: rgba(255,255,255,0.05);
-    padding: 6px 12px;
-    border-radius: 10px;
+    padding: 10px 16px;
+    border-radius: 12px;
+    margin: 10px 0;
 }
 
 .code-label {
-    font-size: 0.7rem;
+    font-size: 0.8rem;
     color: rgba(255,255,255,0.4);
 }
 
 .code-value {
-    font-size: 1.2rem;
+    font-size: 1.5rem;
     font-weight: 800;
     color: #4facfe;
-    letter-spacing: 2px;
+    letter-spacing: 3px;
 }
 
 .lobby-info {
@@ -488,17 +566,11 @@ body {
     max-width: 450px;
 }
 
-.find-lobby-container h2 {
-    text-align: center;
-    font-size: 1.8rem;
-    margin-bottom: 20px;
-    color: white;
-}
-
 .lobbies-list {
     max-height: 400px;
     overflow-y: auto;
     margin-bottom: 15px;
+    margin-top: 10px;
 }
 
 .lobby-item {
@@ -572,18 +644,11 @@ body {
     border: 1px solid rgba(255,255,255,0.1);
 }
 
-.stats-container h2 {
-    text-align: center;
-    font-size: 1.8rem;
-    margin-bottom: 25px;
-    color: white;
-}
-
 .stats-grid {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    margin-bottom: 25px;
+    margin-top: 20px;
 }
 
 .stat-item {
@@ -625,12 +690,8 @@ body {
     transition: width 0.5s ease;
 }
 
-.stats-container .btn-primary {
-    width: 100%;
-}
-
 /* ===== ИГРОВОЙ ЭКРАН ===== */
-#gameScreen {
+#gameScreen, #freePlayScreen {
     background: #0a0a1a;
     flex-direction: column;
     padding: 0;
@@ -643,6 +704,7 @@ body {
     background: rgba(0,0,0,0.5);
     backdrop-filter: blur(10px);
     z-index: 10;
+    position: relative;
 }
 
 .score-board {
@@ -695,7 +757,7 @@ body {
     text-shadow: 0 0 20px rgba(245,87,108,0.3);
 }
 
-#gameCanvas {
+#gameCanvas, #freePlayCanvas {
     flex: 1;
     width: 100%;
     background: radial-gradient(ellipse at center, #2d8a4e, #1a5a3a);
@@ -724,13 +786,13 @@ body {
     pointer-events: auto;
 }
 
-#joystickContainer {
+#joystickContainer, #freePlayJoystickContainer {
     width: 140px;
     height: 140px;
     margin-bottom: 10px;
 }
 
-#joystickBase {
+#joystickBase, #freePlayJoystickBase {
     width: 140px;
     height: 140px;
     border-radius: 50%;
@@ -742,7 +804,7 @@ body {
     touch-action: none;
 }
 
-#joystickThumb {
+#joystickThumb, #freePlayJoystickThumb {
     width: 60px;
     height: 60px;
     border-radius: 50%;
@@ -757,7 +819,7 @@ body {
     border: 2px solid rgba(255,255,255,0.2);
 }
 
-#joystickThumb::after {
+#joystickThumb::after, #freePlayJoystickThumb::after {
     content: '';
     position: absolute;
     top: 15%;
@@ -900,17 +962,17 @@ body {
 @media (max-width: 480px) {
     .logo h1 { font-size: 1.8rem; }
     
-    #joystickContainer {
+    #joystickContainer, #freePlayJoystickContainer {
         width: 110px;
         height: 110px;
     }
     
-    #joystickBase {
+    #joystickBase, #freePlayJoystickBase {
         width: 110px;
         height: 110px;
     }
     
-    #joystickThumb {
+    #joystickThumb, #freePlayJoystickThumb {
         width: 50px;
         height: 50px;
     }
@@ -950,20 +1012,24 @@ body {
     .stats-container {
         padding: 20px;
     }
+    
+    .screen-header h2 {
+        font-size: 1.3rem;
+    }
 }
 
 @media (max-width: 380px) {
-    #joystickContainer {
+    #joystickContainer, #freePlayJoystickContainer {
         width: 90px;
         height: 90px;
     }
     
-    #joystickBase {
+    #joystickBase, #freePlayJoystickBase {
         width: 90px;
         height: 90px;
     }
     
-    #joystickThumb {
+    #joystickThumb, #freePlayJoystickThumb {
         width: 40px;
         height: 40px;
     }
