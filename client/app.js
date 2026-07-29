@@ -17,6 +17,7 @@ class FootballGame {
         this._isStopped = false;
         this.playerData = null;
         this._gameEnded = false;
+        this._autoLoginDone = false;
         
         // Для свободной игры
         this._isFreePlay = false;
@@ -125,11 +126,15 @@ class FootballGame {
         setInterval(() => this.sendMove(), 50);
         setInterval(() => this.freePlayUpdate(), 30);
         
-        // Автовход
+        // ✅ АВТОВХОД — СРАЗУ ПОСЛЕ ЗАГРУЗКИ
         if (this.playerData && this.playerData.name) {
             this.playerName = this.playerData.name;
             this.playerNameInput.value = this.playerData.name;
-            setTimeout(() => this.handleLogin(), 300);
+            // Небольшая задержка для инициализации WebSocket
+            setTimeout(() => {
+                this.handleLogin();
+                this._autoLoginDone = true;
+            }, 500);
         }
     }
     
@@ -242,7 +247,10 @@ class FootballGame {
             this.savePlayerData();
         }
         
-        this.connectWebSocket();
+        // Если WebSocket ещё не создан или закрыт — создаём
+        if (!this.ws || this.ws.readyState === WebSocket.CLOSED) {
+            this.connectWebSocket();
+        }
         
         setTimeout(() => {
             if (this.ws && this.ws.readyState === WebSocket.OPEN) {
@@ -692,7 +700,6 @@ class FootballGame {
         this.showScreen('freePlayScreen');
         this.resizeFreeCanvas();
         
-        // Сбрасываем джостик свободной игры
         const thumb = document.getElementById('freePlayJoystickThumb');
         if (thumb) thumb.style.transform = 'translate(-50%, -50%)';
         
@@ -714,7 +721,6 @@ class FootballGame {
         const b = this._freePlayBall;
         const speed = 4;
         
-        // Движение игрока
         const dx = p.targetX - p.x;
         const dy = p.targetY - p.y;
         const dist = Math.hypot(dx, dy);
@@ -724,14 +730,12 @@ class FootballGame {
             p.y += (dy / dist) * s;
         }
         
-        // Если мяч у игрока
         if (p.hasBall) {
             b.x = p.x + 25;
             b.y = p.y;
             b.vx = 0;
             b.vy = 0;
         } else {
-            // Физика мяча
             b.x += b.vx;
             b.y += b.vy;
             b.vx *= 0.99;
@@ -739,7 +743,6 @@ class FootballGame {
             if (Math.abs(b.vx) < 0.05) b.vx = 0;
             if (Math.abs(b.vy) < 0.05) b.vy = 0;
             
-            // Отскоки от стен
             const r = b.radius;
             if (b.x < r || b.x > 800 - r) {
                 b.vx *= -0.6;
@@ -750,10 +753,8 @@ class FootballGame {
                 b.y = Math.max(r, Math.min(450 - r, b.y));
             }
             
-            // Проверка голов
             this.checkFreePlayGoal();
             
-            // Подбор мяча игроком
             const distToBall = Math.hypot(p.x - b.x, p.y - b.y);
             if (distToBall < 30 && !p.hasBall) {
                 p.hasBall = true;
@@ -763,7 +764,6 @@ class FootballGame {
             }
         }
         
-        // Обновляем счёт
         this.freePlayScoreEl.textContent = this._freePlayScore;
         this.freePlayOpponentScoreEl.textContent = this._freePlayOpponentScore;
     }
@@ -1037,7 +1037,6 @@ class FootballGame {
         ctx.clearRect(0, 0, w, h);
         const scaleX = w / this._baseWidth, scaleY = h / this._baseHeight;
         
-        // Поле
         const gradient = ctx.createLinearGradient(0, 0, 0, h);
         gradient.addColorStop(0, '#2d8a4e');
         gradient.addColorStop(0.5, '#3ca55c');
@@ -1068,7 +1067,6 @@ class FootballGame {
         ctx.fillStyle = 'rgba(255,255,255,0.4)';
         ctx.fill();
         
-        // Ворота
         const goalWidth = 50 * scaleX, goalHeight = 100 * scaleY;
         const goalY = 225 * scaleY - goalHeight / 2, goalDepth = 15 * scaleX;
         ctx.strokeStyle = 'rgba(255,255,255,0.7)';
@@ -1094,7 +1092,6 @@ class FootballGame {
             ctx.lineTo(x, goalY + goalHeight - 5 * scaleY);
             ctx.stroke();
         }
-        
         ctx.strokeStyle = 'rgba(255,255,255,0.7)';
         ctx.lineWidth = 3 * scaleX;
         ctx.beginPath();
@@ -1117,7 +1114,6 @@ class FootballGame {
             ctx.lineTo(x, goalY + goalHeight - 5 * scaleY);
             ctx.stroke();
         }
-        
         ctx.strokeStyle = 'rgba(255,255,255,0.25)';
         ctx.lineWidth = 2 * scaleX;
         const penaltyWidth = 80 * scaleX, penaltyHeight = goalHeight + 40 * scaleY;
@@ -1125,7 +1121,6 @@ class FootballGame {
         ctx.strokeRect(0, penaltyY, penaltyWidth, penaltyHeight);
         ctx.strokeRect(w - penaltyWidth, penaltyY, penaltyWidth, penaltyHeight);
         
-        // Мяч
         if (this.ball && this.ball.x !== undefined) {
             const bx = this.ball.x * scaleX, by = this.ball.y * scaleY;
             const br = Math.max(5, 10 * scaleX);
@@ -1161,7 +1156,6 @@ class FootballGame {
             ctx.stroke();
         }
         
-        // Игроки
         const playersList = Object.values(this.players);
         if (playersList.length > 0) {
             playersList.forEach(player => {
@@ -1254,7 +1248,6 @@ class FootballGame {
         const baseW = 800, baseH = 450;
         const scaleX = w / baseW, scaleY = h / baseH;
         
-        // Поле
         const gradient = ctx.createLinearGradient(0, 0, 0, h);
         gradient.addColorStop(0, '#2d8a4e');
         gradient.addColorStop(0.5, '#3ca55c');
@@ -1285,7 +1278,6 @@ class FootballGame {
         ctx.fillStyle = 'rgba(255,255,255,0.4)';
         ctx.fill();
         
-        // Ворота
         const goalWidth = 50 * scaleX, goalHeight = 100 * scaleY;
         const goalY = 225 * scaleY - goalHeight / 2, goalDepth = 15 * scaleX;
         ctx.strokeStyle = 'rgba(255,255,255,0.7)';
@@ -1340,7 +1332,6 @@ class FootballGame {
         ctx.strokeRect(0, penaltyY, penaltyWidth, penaltyHeight);
         ctx.strokeRect(w - penaltyWidth, penaltyY, penaltyWidth, penaltyHeight);
         
-        // Мяч
         const b = this._freePlayBall;
         const bx = b.x * scaleX, by = b.y * scaleY;
         const br = Math.max(5, 10 * scaleX);
@@ -1375,7 +1366,6 @@ class FootballGame {
         ctx.arc(bx, by, br * 0.5, 0, Math.PI * 2);
         ctx.stroke();
         
-        // Игрок
         const p = this._freePlayPlayer;
         const px = p.x * scaleX, py = p.y * scaleY;
         const pr = Math.max(12, 14 * scaleX);
@@ -1478,41 +1468,36 @@ class FootballGame {
             if (e.key === 'Enter') this.handleLogin();
         });
         
-        // Главное меню
         this.matchesBtn.addEventListener('click', () => this.showScreen('matchesScreen'));
         this.playerBtn.addEventListener('click', () => this.showScreen('playerScreen'));
         
-        // Матчи
-        this.backFromMatchesBtn.addEventListener('click', () => this.showScreen('menuScreen'));
+        // Матчи — УБИРАЕМ ЛИШНИЕ СТРЕЛКИ
+        this.backFromMatchesBtn.style.display = 'none';
         this.backFromMatchesBottomBtn.addEventListener('click', () => this.showScreen('menuScreen'));
         this.createLobbyBtn.addEventListener('click', () => this.showScreen('createLobbyScreen'));
         this.findLobbyBtn.addEventListener('click', () => this.handleFindLobbies());
         this.freePlayBtn.addEventListener('click', () => this.startFreePlay());
         
-        // Игрок
-        this.backFromPlayerBtn.addEventListener('click', () => this.showScreen('menuScreen'));
+        // Игрок — УБИРАЕМ ЛИШНИЕ СТРЕЛКИ
+        this.backFromPlayerBtn.style.display = 'none';
         this.backFromPlayerBottomBtn.addEventListener('click', () => this.showScreen('menuScreen'));
         this.playerStatsBtn.addEventListener('click', () => this.showScreen('statsScreen'));
         this.playerChangeNameBtn.addEventListener('click', () => this.handleChangeName());
         
-        // Создание лобби
         this.backFromCreateBtn.addEventListener('click', () => this.showScreen('matchesScreen'));
         this.mode1v1Btn.addEventListener('click', () => this.handleCreateLobby('1v1'));
         this.mode2v2Btn.addEventListener('click', () => this.handleCreateLobby('2v2'));
         
-        // Лобби
         this.leaveLobbyBtn.addEventListener('click', () => this.handleLeaveLobby());
         this.copyCodeBtn.addEventListener('click', () => this.handleCopyCode());
         this.startGameBtn.addEventListener('click', () => this.handleStartGame());
         
-        // Поиск лобби
         this.backFromFindBtn.addEventListener('click', () => this.showScreen('matchesScreen'));
         this.refreshLobbiesBtn.addEventListener('click', () => this.handleFindLobbies());
         
-        // Характеристики
+        // Характеристики — ИСПРАВЛЯЕМ ВЫХОД
         this.backFromStatsBtn.addEventListener('click', () => this.showScreen('playerScreen'));
         
-        // Свободная игра
         this.exitFreePlayBtn.addEventListener('click', () => this.stopFreePlay());
         this.freePlayKickBtn.addEventListener('click', () => this.freePlayKick());
         this.freePlayKickBtn.addEventListener('touchstart', (e) => {
@@ -1524,7 +1509,6 @@ class FootballGame {
             e.preventDefault();
         });
         
-        // Онлайн игра
         this.kickBtn.addEventListener('click', () => this.handleKick());
         this.kickBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
