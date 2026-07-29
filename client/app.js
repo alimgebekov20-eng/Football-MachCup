@@ -85,6 +85,7 @@ class FootballGame {
         this.packsBtn = document.getElementById('packsBtn');
         this.playerStatsBtn = document.getElementById('playerStatsBtn');
         this.playerChangeNameBtn = document.getElementById('playerChangeNameBtn');
+        this.backFromStatsBtn = document.getElementById('backFromStatsBtn');
         
         this.createLobbyBtn = document.getElementById('createLobbyBtn');
         this.findLobbyBtn = document.getElementById('findLobbyBtn');
@@ -281,10 +282,8 @@ class FootballGame {
             this.displayWins.textContent = '🏆 ' + (this.playerData.wins || 0) + 'W';
             this.displayLosses.textContent = '💔 ' + (this.playerData.losses || 0) + 'L';
             
-            // Применяем экипированные скины
             this.applyEquippedSkins();
             
-            // Кристаллы
             const crystals = this.playerData.crystals || 0;
             if (this.menuCrystals) this.menuCrystals.textContent = crystals;
             if (this.upgradeCrystals) this.upgradeCrystals.textContent = crystals;
@@ -296,10 +295,8 @@ class FootballGame {
         const stats = this.playerData.stats || { speed: 50, power: 50, pass: 50, defense: 50 };
         const equipped = this.playerData.equipped || {};
         
-        // Базовые значения
         let speed = 50, power = 50, pass = 50, defense = 50;
         
-        // Применяем скины
         for (const stat of ['speed', 'power', 'pass', 'defense']) {
             const skinId = equipped[stat];
             if (skinId) {
@@ -314,19 +311,16 @@ class FootballGame {
             }
         }
         
-        // Ограничиваем до 100
         stats.speed = Math.min(100, speed);
         stats.power = Math.min(100, power);
         stats.pass = Math.min(100, pass);
         stats.defense = Math.min(100, defense);
         
-        // Обновляем ОВР
         const ovr = Math.floor((stats.speed + stats.power + stats.pass + stats.defense) / 4);
         if (this.ovrElement) {
             this.ovrElement.textContent = ovr;
         }
         
-        // Обновляем UI характеристик (если они есть на экране)
         const speedEl = document.getElementById('statSpeed');
         const powerEl = document.getElementById('statPower');
         const passEl = document.getElementById('statPass');
@@ -336,7 +330,6 @@ class FootballGame {
         if (passEl) passEl.textContent = stats.pass;
         if (defenseEl) defenseEl.textContent = stats.defense;
         
-        // Обновляем бары
         const speedBar = document.getElementById('statSpeedBar');
         const powerBar = document.getElementById('statPowerBar');
         const passBar = document.getElementById('statPassBar');
@@ -710,7 +703,7 @@ class FootballGame {
             
             item.innerHTML = `
                 <span class="item-name">${skin.rarityEmoji} ${skin.name}</span>
-                <span class="item-bonus">+${skin.bononus} ${skin.statIcon}</span>
+                <span class="item-bonus">+${skin.bonus} ${skin.statIcon}</span>
                 <button class="item-equip-btn ${isEquipped ? 'equipped' : ''}" data-skin-id="${skin.id}">
                     ${isEquipped ? '✅ Экипирован' : '▶ Экипировать'}
                 </button>
@@ -735,7 +728,6 @@ class FootballGame {
             this.playerData.equipped = { speed: null, power: null, pass: null, defense: null };
         }
         
-        // Если этот скин уже экипирован — снимаем его
         if (this.playerData.equipped[skin.stat] === skinId) {
             this.playerData.equipped[skin.stat] = null;
             this.savePlayerData();
@@ -744,7 +736,6 @@ class FootballGame {
             return;
         }
         
-        // Надеваем скин (снимаем старый с этой же характеристики)
         this.playerData.equipped[skin.stat] = skinId;
         this.savePlayerData();
         this.updateUIStats();
@@ -767,18 +758,15 @@ class FootballGame {
             return;
         }
         
-        // Списываем кристаллы
         this.playerData.crystals = crystals - pack.price;
         this.savePlayerData();
         this.updateUIStats();
         
-        // Запускаем анимацию открытия
         this._isOpeningPack = true;
         this.startPackAnimation(pack);
     }
     
     startPackAnimation(pack) {
-        // Получаем скины, которые могут выпасть из этого пака
         const rarityOrder = ['common', 'rare', 'epic', 'legendary', 'mythic'];
         const maxRarityIndex = rarityOrder.indexOf(pack.rarity);
         const availableRarities = rarityOrder.slice(0, maxRarityIndex + 1);
@@ -790,7 +778,7 @@ class FootballGame {
             return;
         }
         
-        // Показываем модалку с рулеткой
+        // Показываем модалку
         this.packResultModal.classList.add('active');
         this.packResultRarity.textContent = '🎰 Открытие пака...';
         this.packResultName.textContent = 'Крутим рулетку!';
@@ -799,7 +787,7 @@ class FootballGame {
         this.closeResultBtn.textContent = '⏳ ...';
         this.closeResultBtn.disabled = true;
         
-        // Анимация рулетки (как в CS:GO)
+        // Анимация рулетки
         let currentIndex = 0;
         let speed = 50;
         let spins = 0;
@@ -815,15 +803,12 @@ class FootballGame {
             currentIndex++;
             spins++;
             
-            // Замедление
             if (spins > totalSpins - 15) {
                 speed += 15;
             }
             
             if (spins >= totalSpins) {
                 clearInterval(spinInterval);
-                
-                // Финальный результат
                 const finalSkin = availableSkins[(currentIndex - 1) % availableSkins.length];
                 this.showPackResult(finalSkin);
             }
@@ -831,7 +816,6 @@ class FootballGame {
     }
     
     showPackResult(skin) {
-        // Показываем результат
         this.packResultRarity.textContent = skin.rarityEmoji + ' ' + skin.rarityLabel;
         this.packResultName.textContent = skin.name;
         this.packResultBonus.textContent = '+' + skin.bonus + ' к ' + skin.statLabel;
@@ -839,7 +823,6 @@ class FootballGame {
         this.closeResultBtn.textContent = '✅ Продолжить';
         this.closeResultBtn.disabled = false;
         
-        // Добавляем скин в инвентарь
         if (!this.playerData.skins.includes(skin.id)) {
             this.playerData.skins.push(skin.id);
         }
@@ -863,7 +846,6 @@ class FootballGame {
         this.previewTitle.textContent = `📦 ${pack.emoji} ${pack.name} пак`;
         this.previewContent.innerHTML = '';
         
-        // Группируем по редкости
         const grouped = {};
         for (const skin of availableSkins) {
             if (!grouped[skin.rarity]) grouped[skin.rarity] = [];
@@ -1929,6 +1911,11 @@ class FootballGame {
             this.playerChangeNameBtn.addEventListener('click', () => this.handleChangeName());
         }
         
+        // Характеристики
+        if (this.backFromStatsBtn) {
+            this.backFromStatsBtn.addEventListener('click', () => this.showScreen('playerScreen'));
+        }
+        
         // Прокачка
         if (this.backFromUpgradeBtn) {
             this.backFromUpgradeBtn.addEventListener('click', () => this.showScreen('menuScreen'));
@@ -2028,11 +2015,6 @@ class FootballGame {
         }
         if (this.refreshLobbiesBtn) {
             this.refreshLobbiesBtn.addEventListener('click', () => this.handleFindLobbies());
-        }
-        
-        // Характеристики
-        if (this.backFromStatsBtn) {
-            this.backFromStatsBtn.addEventListener('click', () => this.showScreen('playerScreen'));
         }
         
         // Свободная игра
