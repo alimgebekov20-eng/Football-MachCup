@@ -19,7 +19,6 @@ class FootballGame {
         this._gameEnded = false;
         this._autoLoginDone = false;
         
-        // Для свободной игры
         this._isFreePlay = false;
         this._freePlayScore = 0;
         this._freePlayOpponentScore = 0;
@@ -54,7 +53,6 @@ class FootballGame {
         
         this.matchesBtn = document.getElementById('matchesBtn');
         this.playerBtn = document.getElementById('playerBtn');
-        // ❌ УДАЛЕНЫ: this.backFromMatchesBtn, this.backFromPlayerBtn
         this.backFromMatchesBottomBtn = document.getElementById('backFromMatchesBottomBtn');
         this.backFromPlayerBottomBtn = document.getElementById('backFromPlayerBottomBtn');
         this.playerStatsBtn = document.getElementById('playerStatsBtn');
@@ -110,7 +108,6 @@ class FootballGame {
         this._freePlayMoveX = 400;
         this._freePlayMoveY = 300;
         
-        // Загрузка из localStorage
         this.loadPlayerData();
         
         this.setupEventListeners();
@@ -125,7 +122,6 @@ class FootballGame {
         setInterval(() => this.sendMove(), 50);
         setInterval(() => this.freePlayUpdate(), 30);
         
-        // Автовход
         if (this.playerData && this.playerData.name) {
             this.playerName = this.playerData.name;
             this.playerNameInput.value = this.playerData.name;
@@ -1460,61 +1456,122 @@ class FootballGame {
     
     // ========== СОБЫТИЯ ==========
     setupEventListeners() {
-        this.enterBtn.addEventListener('click', () => this.handleLogin());
-        this.playerNameInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') this.handleLogin();
-        });
+        // Вход
+        if (this.enterBtn) {
+            this.enterBtn.addEventListener('click', () => this.handleLogin());
+        }
+        if (this.playerNameInput) {
+            this.playerNameInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') this.handleLogin();
+            });
+        }
         
-        this.matchesBtn.addEventListener('click', () => this.showScreen('matchesScreen'));
-        this.playerBtn.addEventListener('click', () => this.showScreen('playerScreen'));
+        // Главное меню
+        if (this.matchesBtn) {
+            this.matchesBtn.addEventListener('click', () => this.showScreen('matchesScreen'));
+        }
+        if (this.playerBtn) {
+            this.playerBtn.addEventListener('click', () => this.showScreen('playerScreen'));
+        }
         
         // Матчи
-        this.backFromMatchesBottomBtn.addEventListener('click', () => this.showScreen('menuScreen'));
-        this.createLobbyBtn.addEventListener('click', () => this.showScreen('createLobbyScreen'));
-        this.findLobbyBtn.addEventListener('click', () => this.handleFindLobbies());
-        this.freePlayBtn.addEventListener('click', () => this.startFreePlay());
+        if (this.backFromMatchesBottomBtn) {
+            this.backFromMatchesBottomBtn.addEventListener('click', () => this.showScreen('menuScreen'));
+        }
+        if (this.createLobbyBtn) {
+            this.createLobbyBtn.addEventListener('click', () => this.showScreen('createLobbyScreen'));
+        }
+        if (this.findLobbyBtn) {
+            this.findLobbyBtn.addEventListener('click', () => this.handleFindLobbies());
+        }
+        if (this.freePlayBtn) {
+            this.freePlayBtn.addEventListener('click', () => this.startFreePlay());
+        }
         
         // Игрок
-        this.backFromPlayerBottomBtn.addEventListener('click', () => this.showScreen('menuScreen'));
-        this.playerStatsBtn.addEventListener('click', () => this.showScreen('statsScreen'));
-        this.playerChangeNameBtn.addEventListener('click', () => this.handleChangeName());
+        if (this.backFromPlayerBottomBtn) {
+            this.backFromPlayerBottomBtn.addEventListener('click', () => this.showScreen('menuScreen'));
+        }
+        if (this.playerStatsBtn) {
+            this.playerStatsBtn.addEventListener('click', () => this.showScreen('statsScreen'));
+        }
+        if (this.playerChangeNameBtn) {
+            this.playerChangeNameBtn.addEventListener('click', () => this.handleChangeName());
+        }
         
-        this.backFromCreateBtn.addEventListener('click', () => this.showScreen('matchesScreen'));
-        this.mode1v1Btn.addEventListener('click', () => this.handleCreateLobby('1v1'));
-        this.mode2v2Btn.addEventListener('click', () => this.handleCreateLobby('2v2'));
+        // Создание лобби
+        if (this.backFromCreateBtn) {
+            this.backFromCreateBtn.addEventListener('click', () => this.showScreen('matchesScreen'));
+        }
+        if (this.mode1v1Btn) {
+            this.mode1v1Btn.addEventListener('click', () => this.handleCreateLobby('1v1'));
+        }
+        if (this.mode2v2Btn) {
+            this.mode2v2Btn.addEventListener('click', () => this.handleCreateLobby('2v2'));
+        }
         
-        this.leaveLobbyBtn.addEventListener('click', () => this.handleLeaveLobby());
-        this.copyCodeBtn.addEventListener('click', () => this.handleCopyCode());
-        this.startGameBtn.addEventListener('click', () => this.handleStartGame());
+        // Лобби
+        if (this.leaveLobbyBtn) {
+            this.leaveLobbyBtn.addEventListener('click', () => this.handleLeaveLobby());
+        }
+        if (this.copyCodeBtn) {
+            this.copyCodeBtn.addEventListener('click', () => this.handleCopyCode());
+        }
+        if (this.startGameBtn) {
+            this.startGameBtn.addEventListener('click', () => this.handleStartGame());
+        }
         
-        this.backFromFindBtn.addEventListener('click', () => this.showScreen('matchesScreen'));
-        this.refreshLobbiesBtn.addEventListener('click', () => this.handleFindLobbies());
+        // Поиск лобби
+        if (this.backFromFindBtn) {
+            this.backFromFindBtn.addEventListener('click', () => this.showScreen('matchesScreen'));
+        }
+        if (this.refreshLobbiesBtn) {
+            this.refreshLobbiesBtn.addEventListener('click', () => this.handleFindLobbies());
+        }
         
-        this.backFromStatsBtn.addEventListener('click', () => this.showScreen('playerScreen'));
+        // Характеристики
+        if (this.backFromStatsBtn) {
+            this.backFromStatsBtn.addEventListener('click', () => this.showScreen('playerScreen'));
+        }
         
-        this.exitFreePlayBtn.addEventListener('click', () => this.stopFreePlay());
-        this.freePlayKickBtn.addEventListener('click', () => this.freePlayKick());
-        this.freePlayKickBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            this.freePlayKick();
-        });
-        this.freePlayTackleBtn.addEventListener('click', () => {});
-        this.freePlayTackleBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-        });
+        // Свободная игра
+        if (this.exitFreePlayBtn) {
+            this.exitFreePlayBtn.addEventListener('click', () => this.stopFreePlay());
+        }
+        if (this.freePlayKickBtn) {
+            this.freePlayKickBtn.addEventListener('click', () => this.freePlayKick());
+            this.freePlayKickBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.freePlayKick();
+            });
+        }
+        if (this.freePlayTackleBtn) {
+            this.freePlayTackleBtn.addEventListener('click', () => {});
+            this.freePlayTackleBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+            });
+        }
         
-        this.kickBtn.addEventListener('click', () => this.handleKick());
-        this.kickBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            this.handleKick();
-        });
-        this.tackleBtn.addEventListener('click', () => this.handleTackle());
-        this.tackleBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            this.handleTackle();
-        });
-        this.backToMenuBtn.addEventListener('click', () => this.handleBackToMenu());
+        // Онлайн игра
+        if (this.kickBtn) {
+            this.kickBtn.addEventListener('click', () => this.handleKick());
+            this.kickBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.handleKick();
+            });
+        }
+        if (this.tackleBtn) {
+            this.tackleBtn.addEventListener('click', () => this.handleTackle());
+            this.tackleBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.handleTackle();
+            });
+        }
+        if (this.backToMenuBtn) {
+            this.backToMenuBtn.addEventListener('click', () => this.handleBackToMenu());
+        }
         
+        // Window события
         window.addEventListener('resize', () => {
             this.resizeCanvas();
             this.resizeFreeCanvas();
