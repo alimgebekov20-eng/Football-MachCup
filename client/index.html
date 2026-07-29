@@ -145,6 +145,7 @@
                 <button class="filter-btn" data-filter="rare">🔵 Редкие</button>
                 <button class="filter-btn" data-filter="epic">🟣 Эпические</button>
                 <button class="filter-btn" data-filter="legendary">🟠 Легендарные</button>
+                <button class="filter-btn" data-filter="mythic">🔴 Мифические</button>
             </div>
             
             <div id="inventoryList" class="inventory-list">
@@ -170,34 +171,54 @@
                 <div class="pack-card common">
                     <div class="pack-rarity">🟢 Обычный</div>
                     <div class="pack-price">💎 25</div>
-                    <div class="pack-bonus">+2 к характеристикам</div>
+                    <div class="pack-bonus">+2 до +8</div>
                     <button class="pack-open-btn" data-pack="common">Открыть</button>
                     <button class="pack-preview-btn" data-pack="common">👁️ Что падает?</button>
                 </div>
                 <div class="pack-card rare">
                     <div class="pack-rarity">🔵 Редкий</div>
                     <div class="pack-price">💎 100</div>
-                    <div class="pack-bonus">+4 к характеристикам</div>
+                    <div class="pack-bonus">+10 до +18</div>
                     <button class="pack-open-btn" data-pack="rare">Открыть</button>
                     <button class="pack-preview-btn" data-pack="rare">👁️ Что падает?</button>
                 </div>
                 <div class="pack-card epic">
                     <div class="pack-rarity">🟣 Эпический</div>
                     <div class="pack-price">💎 200</div>
-                    <div class="pack-bonus">+7 к характеристикам</div>
+                    <div class="pack-bonus">+20 до +30</div>
                     <button class="pack-open-btn" data-pack="epic">Открыть</button>
                     <button class="pack-preview-btn" data-pack="epic">👁️ Что падает?</button>
                 </div>
                 <div class="pack-card legendary">
                     <div class="pack-rarity">🟠 Легендарный</div>
                     <div class="pack-price">💎 350</div>
-                    <div class="pack-bonus">+10 к характеристикам</div>
+                    <div class="pack-bonus">+32 до +42</div>
                     <button class="pack-open-btn" data-pack="legendary">Открыть</button>
                     <button class="pack-preview-btn" data-pack="legendary">👁️ Что падает?</button>
+                </div>
+                <div class="pack-card mythic">
+                    <div class="pack-rarity">🔴 Мифический</div>
+                    <div class="pack-price">💎 600</div>
+                    <div class="pack-bonus">+45 до +50</div>
+                    <button class="pack-open-btn" data-pack="mythic">Открыть</button>
+                    <button class="pack-preview-btn" data-pack="mythic">👁️ Что падает?</button>
                 </div>
             </div>
             
             <button id="backFromPacksBtn" class="btn-back">← Назад</button>
+        </div>
+    </div>
+
+    <!-- МОДАЛ РЕЗУЛЬТАТА ОТКРЫТИЯ ПАКА -->
+    <div id="packResultModal" class="modal hidden">
+        <div class="modal-content pack-result">
+            <div id="packResultContent">
+                <div id="packResultRarity" class="result-rarity">🟢 Обычный</div>
+                <div id="packResultName" class="result-name">⚪ Белый</div>
+                <div id="packResultBonus" class="result-bonus">+2 к Скорости</div>
+                <div id="packResultStat" class="result-stat">🏃 Скорость</div>
+            </div>
+            <button id="closeResultBtn" class="btn-primary">Продолжить</button>
         </div>
     </div>
 
