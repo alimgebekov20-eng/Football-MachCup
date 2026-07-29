@@ -1582,6 +1582,14 @@ class FootballGame {
                 this.resizeFreeCanvas();
             }, 300);
         });
+        // Характеристики — ПРИНУДИТЕЛЬНЫЙ ВЫХОД
+        const statsBackBtn = document.getElementById('backFromStatsBtn');
+        if (statsBackBtn) {
+            statsBackBtn.addEventListener('click', () => {
+                console.log('🔙 Выход из характеристик');
+                this.showScreen('playerScreen');
+            });
+        }
     }
     
     handleKick() {
