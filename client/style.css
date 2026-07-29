@@ -200,26 +200,6 @@ body {
     transform: scale(0.9);
 }
 
-.btn-back-header {
-    position: absolute;
-    top: 15px;
-    left: 15px;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.1);
-    color: white;
-    font-size: 1.5rem;
-    padding: 4px 14px;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.3s;
-    z-index: 10;
-}
-
-.btn-back-header:active {
-    transform: scale(0.9);
-    background: rgba(255,255,255,0.1);
-}
-
 .btn-exit {
     position: absolute;
     top: 15px;
@@ -298,11 +278,16 @@ body {
     max-width: 400px;
 }
 
+.matches-container h2 {
+    font-size: 1.8rem;
+    margin-bottom: 25px;
+    color: white;
+}
+
 .matches-buttons {
     display: flex;
     flex-direction: column;
     gap: 15px;
-    margin-top: 20px;
 }
 
 /* ===== ЭКРАН ИГРОК ===== */
@@ -313,33 +298,16 @@ body {
     max-width: 400px;
 }
 
+.player-container h2 {
+    font-size: 1.8rem;
+    margin-bottom: 25px;
+    color: white;
+}
+
 .player-buttons {
     display: flex;
     flex-direction: column;
     gap: 15px;
-    margin-top: 20px;
-}
-
-/* ===== ШАПКА ЭКРАНА ===== */
-.screen-header {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    position: relative;
-    margin-bottom: 20px;
-}
-
-.screen-header h2 {
-    font-size: 1.6rem;
-    color: white;
-}
-
-.screen-header .btn-back-header {
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
 }
 
 /* ===== КНОПКИ МЕНЮ ===== */
@@ -409,11 +377,16 @@ body {
     max-width: 400px;
 }
 
+.create-lobby-container h2 {
+    font-size: 1.8rem;
+    margin-bottom: 25px;
+    color: white;
+}
+
 .mode-buttons {
     display: flex;
     flex-direction: column;
     gap: 15px;
-    margin-top: 20px;
 }
 
 .btn-mode {
@@ -459,6 +432,13 @@ body {
     border-radius: 20px;
     backdrop-filter: blur(20px);
     border: 1px solid rgba(255,255,255,0.1);
+}
+
+.lobby-container h2 {
+    text-align: center;
+    font-size: 1.6rem;
+    color: white;
+    margin-bottom: 15px;
 }
 
 .lobby-code-display {
@@ -566,11 +546,17 @@ body {
     max-width: 450px;
 }
 
+.find-lobby-container h2 {
+    text-align: center;
+    font-size: 1.8rem;
+    margin-bottom: 20px;
+    color: white;
+}
+
 .lobbies-list {
     max-height: 400px;
     overflow-y: auto;
     margin-bottom: 15px;
-    margin-top: 10px;
 }
 
 .lobby-item {
@@ -644,11 +630,17 @@ body {
     border: 1px solid rgba(255,255,255,0.1);
 }
 
+.stats-container h2 {
+    text-align: center;
+    font-size: 1.8rem;
+    margin-bottom: 25px;
+    color: white;
+}
+
 .stats-grid {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    margin-top: 20px;
 }
 
 .stat-item {
@@ -1013,8 +1005,8 @@ body {
         padding: 20px;
     }
     
-    .screen-header h2 {
-        font-size: 1.3rem;
+    .matches-container h2, .player-container h2, .stats-container h2, .create-lobby-container h2 {
+        font-size: 1.5rem;
     }
 }
 
