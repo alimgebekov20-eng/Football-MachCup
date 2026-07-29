@@ -25,17 +25,21 @@ class FootballGame {
         this._freePlayBall = { x: 400, y: 225, vx: 0, vy: 0, radius: 10 };
         this._freePlayPlayer = { x: 400, y: 300, targetX: 400, targetY: 300, radius: 14, hasBall: true };
         this._freePlayRunning = false;
+        this._isOpeningPack = false;
         
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
         this.freeCanvas = document.getElementById('freePlayCanvas');
         this.freeCtx = this.freeCanvas.getContext('2d');
         
+        // ========== ЭКРАНЫ ==========
         this.loginScreen = document.getElementById('loginScreen');
         this.menuScreen = document.getElementById('menuScreen');
         this.matchesScreen = document.getElementById('matchesScreen');
         this.playerScreen = document.getElementById('playerScreen');
         this.upgradeScreen = document.getElementById('upgradeScreen');
+        this.inventoryScreen = document.getElementById('inventoryScreen');
+        this.packsScreen = document.getElementById('packsScreen');
         this.createLobbyScreen = document.getElementById('createLobbyScreen');
         this.lobbyScreen = document.getElementById('lobbyScreen');
         this.findLobbyScreen = document.getElementById('findLobbyScreen');
@@ -43,6 +47,7 @@ class FootballGame {
         this.gameScreen = document.getElementById('gameScreen');
         this.freePlayScreen = document.getElementById('freePlayScreen');
         
+        // ========== DOM ЭЛЕМЕНТЫ ==========
         this.playerNameInput = document.getElementById('playerName');
         this.enterBtn = document.getElementById('enterGameBtn');
         this.displayName = document.getElementById('displayName');
@@ -52,13 +57,30 @@ class FootballGame {
         this.displayWins = document.getElementById('displayWins');
         this.displayLosses = document.getElementById('displayLosses');
         this.ovrElement = document.getElementById('ovrRating');
+        this.menuCrystals = document.getElementById('menuCrystals');
+        this.upgradeCrystals = document.getElementById('upgradeCrystals');
+        this.packsCrystals = document.getElementById('packsCrystals');
+        this.inventoryList = document.getElementById('inventoryList');
+        this.packResultModal = document.getElementById('packResultModal');
+        this.packResultRarity = document.getElementById('packResultRarity');
+        this.packResultName = document.getElementById('packResultName');
+        this.packResultBonus = document.getElementById('packResultBonus');
+        this.packResultStat = document.getElementById('packResultStat');
+        this.closeResultBtn = document.getElementById('closeResultBtn');
+        this.packPreviewModal = document.getElementById('packPreviewModal');
+        this.previewTitle = document.getElementById('previewTitle');
+        this.previewContent = document.getElementById('previewContent');
+        this.closePreviewBtn = document.getElementById('closePreviewBtn');
         
+        // ========== КНОПКИ ==========
         this.matchesBtn = document.getElementById('matchesBtn');
         this.playerBtn = document.getElementById('playerBtn');
         this.upgradeBtn = document.getElementById('upgradeBtn');
         this.backFromMatchesBottomBtn = document.getElementById('backFromMatchesBottomBtn');
         this.backFromPlayerBottomBtn = document.getElementById('backFromPlayerBottomBtn');
         this.backFromUpgradeBtn = document.getElementById('backFromUpgradeBtn');
+        this.backFromInventoryBtn = document.getElementById('backFromInventoryBtn');
+        this.backFromPacksBtn = document.getElementById('backFromPacksBtn');
         this.inventoryBtn = document.getElementById('inventoryBtn');
         this.packsBtn = document.getElementById('packsBtn');
         this.playerStatsBtn = document.getElementById('playerStatsBtn');
@@ -108,14 +130,29 @@ class FootballGame {
         this.freePlayOpponentScoreEl = document.getElementById('freePlayOpponentScore');
         this.freePlayTimerEl = document.getElementById('freePlayTimer');
         
+        // ========== ПЕРЕМЕННЫЕ ==========
         this._moveX = 400;
         this._moveY = 300;
         this._joystickActive = false;
         this._freePlayMoveX = 400;
         this._freePlayMoveY = 300;
+        this.currentFilter = 'all';
         
+        // ========== ВСЕ СКИНЫ ==========
+        this.allSkins = [];
+        this.generateSkins();
+        
+        // ========== НАСТРОЙКИ ПАКОВ ==========
+        this.packs = {
+            common: { name: 'Обычный', price: 25, rarity: 'common', emoji: '🟢', label: 'Обычные' },
+            rare: { name: 'Редкий', price: 100, rarity: 'rare', emoji: '🔵', label: 'Редкие' },
+            epic: { name: 'Эпический', price: 200, rarity: 'epic', emoji: '🟣', label: 'Эпические' },
+            legendary: { name: 'Легендарный', price: 350, rarity: 'legendary', emoji: '🟠', label: 'Легендарные' },
+            mythic: { name: 'Мифический', price: 600, rarity: 'mythic', emoji: '🔴', label: 'Мифические' }
+        };
+        
+        // ========== ИНИЦИАЛИЗАЦИЯ ==========
         this.loadPlayerData();
-        
         this.setupEventListeners();
         this.setupFullscreen();
         this.setupJoystick();
@@ -138,15 +175,89 @@ class FootballGame {
         }
     }
     
+    // ========== ГЕНЕРАЦИЯ СКИНОВ ==========
+    generateSkins() {
+        const rarityConfigs = {
+            common: { bonusRange: [2, 8], emoji: '🟢', label: 'Обычный' },
+            rare: { bonusRange: [10, 18], emoji: '🔵', label: 'Редкий' },
+            epic: { bonusRange: [20, 30], emoji: '🟣', label: 'Эпический' },
+            legendary: { bonusRange: [32, 42], emoji: '🟠', label: 'Легендарный' },
+            mythic: { bonusRange: [45, 50], emoji: '🔴', label: 'Мифический' }
+        };
+        
+        const statNames = {
+            speed: { name: 'Скорость', icon: '🏃' },
+            power: { name: 'Сила удара', icon: '💪' },
+            pass: { name: 'Точность паса', icon: '🎯' },
+            defense: { name: 'Защита', icon: '🛡️' }
+        };
+        
+        const skinNames = {
+            speed: ['Легкий ветер', 'Быстрый шаг', 'Рысь', 'Бегун', 'Спринтер', 'Скорость света', 'Ураган', 'Молния', 'Сверхзвук', 'Вихрь', 'Шторм', 'Торнадо', 'Сверхзвуковой', 'Быстрее света', 'Неуловимый', 'Со скоростью света', 'Быстрее ветра', 'Бросок молнии', 'Скорость мысли', 'Бесконечность', 'Скорость бога', 'Телепортация'],
+            power: ['Лёгкий удар', 'Твёрдый кулак', 'Мощный замах', 'Сила воли', 'Стальной кулак', 'Сокрушитель', 'Разрушитель', 'Неудержимый', 'Сокрушающий', 'Гром', 'Молот', 'Землетрясение', 'Адский удар', 'Сокрушитель миров', 'Удар титана', 'Дробящий удар', 'Сокрушающий удар', 'Удар молнии', 'Удар бога', 'Ядерный удар', 'Космический удар', 'Сила Вселенной'],
+            pass: ['Меткий глаз', 'Точный пас', 'Снайпер', 'Идеальный пас', 'Непробиваемый пас', 'Шедевральный', 'Мастер паса', 'Гений паса', 'Точность снайпера', 'Точный расчет', 'Лазерный пас', 'Сверхточный', 'Идеальная траектория', 'Непробиваемый пас', 'Пас столетия', 'Филлигранный пас', 'Космический пас', 'Пас сквозь время', 'Пас бога', 'Телепатия', 'Сквозь реальность', 'Вселенский пас'],
+            defense: ['Крепкий щит', 'Железная стена', 'Непробиваемый', 'Крепость', 'Алмазная защита', 'Стальная стена', 'Неуязвимый', 'Бронированный', 'Непробиваемая броня', 'Непреодолимый', 'Непробиваемый', 'Титановая защита', 'Неуничтожимый', 'Абсолютная броня', 'Стена из адаманта', 'Непобедимый', 'Легендарная броня', 'Щит бога', 'Защита бога', 'Космический щит', 'Абсолютная защита', 'Защита Вселенной']
+        };
+        
+        const rarityList = ['common', 'rare', 'epic', 'legendary', 'mythic'];
+        
+        this.allSkins = [];
+        let id = 1;
+        
+        for (const statKey of ['speed', 'power', 'pass', 'defense']) {
+            const names = skinNames[statKey];
+            for (let i = 0; i < names.length; i++) {
+                const rarityIndex = Math.min(Math.floor(i / 4), 4);
+                const rarity = rarityList[rarityIndex] || 'common';
+                const config = rarityConfigs[rarity];
+                const bonus = config.bonusRange[0] + (i % 4) * 2;
+                
+                this.allSkins.push({
+                    id: 'skin_' + id,
+                    name: names[i],
+                    stat: statKey,
+                    statIcon: statNames[statKey].icon,
+                    statLabel: statNames[statKey].name,
+                    bonus: Math.min(bonus, config.bonusRange[1]),
+                    rarity: rarity,
+                    rarityEmoji: config.emoji,
+                    rarityLabel: config.label
+                });
+                id++;
+            }
+        }
+        
+        console.log(`✅ Сгенерировано ${this.allSkins.length} скинов`);
+    }
+    
+    getSkinsByRarity(rarity) {
+        return this.allSkins.filter(s => s.rarity === rarity);
+    }
+    
+    getSkinsByStat(stat) {
+        return this.allSkins.filter(s => s.stat === stat);
+    }
+    
     // ========== РАБОТА С localStorage ==========
     loadPlayerData() {
         const saved = localStorage.getItem('football_player');
         if (saved) {
             try {
                 this.playerData = JSON.parse(saved);
-                // ✅ Если stats нет — создаём
                 if (!this.playerData.stats) {
                     this.playerData.stats = { speed: 50, power: 50, pass: 50, defense: 50 };
+                    this.savePlayerData();
+                }
+                if (!this.playerData.skins) {
+                    this.playerData.skins = [];
+                    this.savePlayerData();
+                }
+                if (!this.playerData.equipped) {
+                    this.playerData.equipped = { speed: null, power: null, pass: null, defense: null };
+                    this.savePlayerData();
+                }
+                if (this.playerData.crystals === undefined) {
+                    this.playerData.crystals = 0;
                     this.savePlayerData();
                 }
                 console.log('📂 Загружены данные игрока:', this.playerData);
@@ -163,34 +274,6 @@ class FootballGame {
         }
     }
     
-    updatePlayerStats(won, score1, score2) {
-        if (!this.playerData) return;
-        
-        this.playerData.games = (this.playerData.games || 0) + 1;
-        if (won) {
-            this.playerData.wins = (this.playerData.wins || 0) + 1;
-        } else {
-            this.playerData.losses = (this.playerData.losses || 0) + 1;
-        }
-        
-        const goalDiff = Math.abs(score1 - score2);
-        let starsChange = 0;
-        
-        if (won) {
-            starsChange = 50 + (score1 - score2) * 10;
-        } else {
-            starsChange = -30 - (score2 - score1) * 5;
-        }
-        
-        const newStars = Math.max(0, (this.playerData.stars || 100) + starsChange);
-        this.playerData.stars = Math.round(newStars);
-        
-        this.savePlayerData();
-        this.updateUIStats();
-        
-        console.log(`⭐ Изменение рейтинга: ${starsChange} → ${this.playerData.stars}`);
-    }
-    
     updateUIStats() {
         if (this.playerData) {
             this.displayStars.textContent = '⭐ ' + this.playerData.stars;
@@ -198,23 +281,77 @@ class FootballGame {
             this.displayWins.textContent = '🏆 ' + (this.playerData.wins || 0) + 'W';
             this.displayLosses.textContent = '💔 ' + (this.playerData.losses || 0) + 'L';
             
-            // ✅ Расчёт ОВР с проверкой
-            const stats = this.playerData.stats || { speed: 50, power: 50, pass: 50, defense: 50 };
-            const speed = stats.speed || 50;
-            const power = stats.power || 50;
-            const pass = stats.pass || 50;
-            const defense = stats.defense || 50;
-            const ovr = Math.floor((speed + power + pass + defense) / 4);
-            if (this.ovrElement) {
-                this.ovrElement.textContent = ovr;
+            // Применяем экипированные скины
+            this.applyEquippedSkins();
+            
+            // Кристаллы
+            const crystals = this.playerData.crystals || 0;
+            if (this.menuCrystals) this.menuCrystals.textContent = crystals;
+            if (this.upgradeCrystals) this.upgradeCrystals.textContent = crystals;
+            if (this.packsCrystals) this.packsCrystals.textContent = crystals;
+        }
+    }
+    
+    applyEquippedSkins() {
+        const stats = this.playerData.stats || { speed: 50, power: 50, pass: 50, defense: 50 };
+        const equipped = this.playerData.equipped || {};
+        
+        // Базовые значения
+        let speed = 50, power = 50, pass = 50, defense = 50;
+        
+        // Применяем скины
+        for (const stat of ['speed', 'power', 'pass', 'defense']) {
+            const skinId = equipped[stat];
+            if (skinId) {
+                const skin = this.allSkins.find(s => s.id === skinId);
+                if (skin) {
+                    const bonus = skin.bonus || 0;
+                    if (stat === 'speed') speed += bonus;
+                    else if (stat === 'power') power += bonus;
+                    else if (stat === 'pass') pass += bonus;
+                    else if (stat === 'defense') defense += bonus;
+                }
             }
         }
+        
+        // Ограничиваем до 100
+        stats.speed = Math.min(100, speed);
+        stats.power = Math.min(100, power);
+        stats.pass = Math.min(100, pass);
+        stats.defense = Math.min(100, defense);
+        
+        // Обновляем ОВР
+        const ovr = Math.floor((stats.speed + stats.power + stats.pass + stats.defense) / 4);
+        if (this.ovrElement) {
+            this.ovrElement.textContent = ovr;
+        }
+        
+        // Обновляем UI характеристик (если они есть на экране)
+        const speedEl = document.getElementById('statSpeed');
+        const powerEl = document.getElementById('statPower');
+        const passEl = document.getElementById('statPass');
+        const defenseEl = document.getElementById('statDefense');
+        if (speedEl) speedEl.textContent = stats.speed;
+        if (powerEl) powerEl.textContent = stats.power;
+        if (passEl) passEl.textContent = stats.pass;
+        if (defenseEl) defenseEl.textContent = stats.defense;
+        
+        // Обновляем бары
+        const speedBar = document.getElementById('statSpeedBar');
+        const powerBar = document.getElementById('statPowerBar');
+        const passBar = document.getElementById('statPassBar');
+        const defenseBar = document.getElementById('statDefenseBar');
+        if (speedBar) speedBar.style.width = stats.speed + '%';
+        if (powerBar) powerBar.style.width = stats.power + '%';
+        if (passBar) passBar.style.width = stats.pass + '%';
+        if (defenseBar) defenseBar.style.width = stats.defense + '%';
     }
     
     showScreen(screenId) {
         const screens = [
             'loginScreen', 'menuScreen', 'matchesScreen', 'playerScreen',
-            'upgradeScreen', 'createLobbyScreen', 'lobbyScreen', 'findLobbyScreen',
+            'upgradeScreen', 'inventoryScreen', 'packsScreen',
+            'createLobbyScreen', 'lobbyScreen', 'findLobbyScreen',
             'statsScreen', 'gameScreen', 'freePlayScreen'
         ];
         screens.forEach(id => {
@@ -228,8 +365,11 @@ class FootballGame {
             }
         });
         
-        if (screenId === 'menuScreen') {
+        if (screenId === 'menuScreen' || screenId === 'upgradeScreen' || screenId === 'packsScreen') {
             this.updateUIStats();
+        }
+        if (screenId === 'inventoryScreen') {
+            this.updateInventory();
         }
     }
     
@@ -259,6 +399,9 @@ class FootballGame {
                 games: 0,
                 wins: 0,
                 losses: 0,
+                crystals: 0,
+                skins: [],
+                equipped: { speed: null, power: null, pass: null, defense: null },
                 stats: { speed: 50, power: 50, pass: 50, defense: 50 }
             };
             this.savePlayerData();
@@ -530,7 +673,270 @@ class FootballGame {
         }
     }
     
+    // ========== ИНВЕНТАРЬ ==========
+    updateInventory() {
+        if (!this.inventoryList) return;
+        
+        const ownedSkins = this.playerData?.skins || [];
+        if (ownedSkins.length === 0) {
+            this.inventoryList.innerHTML = '<div class="empty-inventory">🎒 Инвентарь пуст</div>';
+            return;
+        }
+        
+        const rarityOrder = { mythic: 0, legendary: 1, epic: 2, rare: 3, common: 4 };
+        const sortedSkins = ownedSkins
+            .map(id => this.allSkins.find(s => s.id === id))
+            .filter(s => s)
+            .sort((a, b) => rarityOrder[a.rarity] - rarityOrder[b.rarity]);
+        
+        let filtered = sortedSkins;
+        if (this.currentFilter !== 'all') {
+            filtered = filtered.filter(s => s.rarity === this.currentFilter);
+        }
+        
+        if (filtered.length === 0) {
+            this.inventoryList.innerHTML = '<div class="empty-inventory">😕 Нет скинов с таким фильтром</div>';
+            return;
+        }
+        
+        this.inventoryList.innerHTML = '';
+        const equipped = this.playerData.equipped || {};
+        
+        filtered.forEach(skin => {
+            const item = document.createElement('div');
+            item.className = `inventory-item rarity-${skin.rarity}`;
+            
+            const isEquipped = equipped[skin.stat] === skin.id;
+            
+            item.innerHTML = `
+                <span class="item-name">${skin.rarityEmoji} ${skin.name}</span>
+                <span class="item-bonus">+${skin.bononus} ${skin.statIcon}</span>
+                <button class="item-equip-btn ${isEquipped ? 'equipped' : ''}" data-skin-id="${skin.id}">
+                    ${isEquipped ? '✅ Экипирован' : '▶ Экипировать'}
+                </button>
+            `;
+            
+            const btn = item.querySelector('.item-equip-btn');
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.equipSkin(skin.id);
+            });
+            
+            this.inventoryList.appendChild(item);
+        });
+    }
+    
+    equipSkin(skinId) {
+        const skin = this.allSkins.find(s => s.id === skinId);
+        if (!skin) return;
+        
+        if (!this.playerData) return;
+        if (!this.playerData.equipped) {
+            this.playerData.equipped = { speed: null, power: null, pass: null, defense: null };
+        }
+        
+        // Если этот скин уже экипирован — снимаем его
+        if (this.playerData.equipped[skin.stat] === skinId) {
+            this.playerData.equipped[skin.stat] = null;
+            this.savePlayerData();
+            this.updateUIStats();
+            this.updateInventory();
+            return;
+        }
+        
+        // Надеваем скин (снимаем старый с этой же характеристики)
+        this.playerData.equipped[skin.stat] = skinId;
+        this.savePlayerData();
+        this.updateUIStats();
+        this.updateInventory();
+        
+        console.log(`✅ Экипирован скин: ${skin.name} (+${skin.bonus} ${skin.statIcon})`);
+    }
+    
+    // ========== ПАКИ ==========
+    openPack(packType) {
+        if (this._isOpeningPack) return;
+        if (!this.playerData) return;
+        
+        const pack = this.packs[packType];
+        if (!pack) return;
+        
+        const crystals = this.playerData.crystals || 0;
+        if (crystals < pack.price) {
+            alert(`❌ Недостаточно кристаллов! Нужно ${pack.price}, у вас ${crystals}`);
+            return;
+        }
+        
+        // Списываем кристаллы
+        this.playerData.crystals = crystals - pack.price;
+        this.savePlayerData();
+        this.updateUIStats();
+        
+        // Запускаем анимацию открытия
+        this._isOpeningPack = true;
+        this.startPackAnimation(pack);
+    }
+    
+    startPackAnimation(pack) {
+        // Получаем скины, которые могут выпасть из этого пака
+        const rarityOrder = ['common', 'rare', 'epic', 'legendary', 'mythic'];
+        const maxRarityIndex = rarityOrder.indexOf(pack.rarity);
+        const availableRarities = rarityOrder.slice(0, maxRarityIndex + 1);
+        
+        const availableSkins = this.allSkins.filter(s => availableRarities.includes(s.rarity));
+        
+        if (availableSkins.length === 0) {
+            this._isOpeningPack = false;
+            return;
+        }
+        
+        // Показываем модалку с рулеткой
+        this.packResultModal.classList.add('active');
+        this.packResultRarity.textContent = '🎰 Открытие пака...';
+        this.packResultName.textContent = 'Крутим рулетку!';
+        this.packResultBonus.textContent = '';
+        this.packResultStat.textContent = '';
+        this.closeResultBtn.textContent = '⏳ ...';
+        this.closeResultBtn.disabled = true;
+        
+        // Анимация рулетки (как в CS:GO)
+        let currentIndex = 0;
+        let speed = 50;
+        let spins = 0;
+        const totalSpins = 20 + Math.floor(Math.random() * 15);
+        
+        const spinInterval = setInterval(() => {
+            const skin = availableSkins[currentIndex % availableSkins.length];
+            this.packResultName.textContent = skin.rarityEmoji + ' ' + skin.name;
+            this.packResultRarity.textContent = skin.rarityEmoji + ' ' + skin.rarityLabel;
+            this.packResultBonus.textContent = '+' + skin.bonus + ' к ' + skin.statLabel;
+            this.packResultStat.textContent = skin.statIcon + ' ' + skin.statLabel;
+            
+            currentIndex++;
+            spins++;
+            
+            // Замедление
+            if (spins > totalSpins - 15) {
+                speed += 15;
+            }
+            
+            if (spins >= totalSpins) {
+                clearInterval(spinInterval);
+                
+                // Финальный результат
+                const finalSkin = availableSkins[(currentIndex - 1) % availableSkins.length];
+                this.showPackResult(finalSkin);
+            }
+        }, speed);
+    }
+    
+    showPackResult(skin) {
+        // Показываем результат
+        this.packResultRarity.textContent = skin.rarityEmoji + ' ' + skin.rarityLabel;
+        this.packResultName.textContent = skin.name;
+        this.packResultBonus.textContent = '+' + skin.bonus + ' к ' + skin.statLabel;
+        this.packResultStat.textContent = skin.statIcon + ' ' + skin.statLabel;
+        this.closeResultBtn.textContent = '✅ Продолжить';
+        this.closeResultBtn.disabled = false;
+        
+        // Добавляем скин в инвентарь
+        if (!this.playerData.skins.includes(skin.id)) {
+            this.playerData.skins.push(skin.id);
+        }
+        
+        this.savePlayerData();
+        this._isOpeningPack = false;
+        
+        console.log(`🎉 Выпал скин: ${skin.name} (+${skin.bonus} ${skin.statIcon})`);
+    }
+    
+    showPackPreview(packType) {
+        const pack = this.packs[packType];
+        if (!pack) return;
+        
+        const rarityOrder = ['common', 'rare', 'epic', 'legendary', 'mythic'];
+        const maxRarityIndex = rarityOrder.indexOf(pack.rarity);
+        const availableRarities = rarityOrder.slice(0, maxRarityIndex + 1);
+        
+        const availableSkins = this.allSkins.filter(s => availableRarities.includes(s.rarity));
+        
+        this.previewTitle.textContent = `📦 ${pack.emoji} ${pack.name} пак`;
+        this.previewContent.innerHTML = '';
+        
+        // Группируем по редкости
+        const grouped = {};
+        for (const skin of availableSkins) {
+            if (!grouped[skin.rarity]) grouped[skin.rarity] = [];
+            grouped[skin.rarity].push(skin);
+        }
+        
+        const rarityLabels = {
+            common: '🟢 Обычные',
+            rare: '🔵 Редкие',
+            epic: '🟣 Эпические',
+            legendary: '🟠 Легендарные',
+            mythic: '🔴 Мифические'
+        };
+        
+        for (const rarity of ['common', 'rare', 'epic', 'legendary', 'mythic']) {
+            if (grouped[rarity]) {
+                const header = document.createElement('div');
+                header.style.cssText = 'font-weight:700;margin-top:8px;font-size:0.9rem;color:rgba(255,255,255,0.6);';
+                header.textContent = rarityLabels[rarity] || rarity;
+                this.previewContent.appendChild(header);
+                
+                for (const skin of grouped[rarity]) {
+                    const item = document.createElement('div');
+                    item.className = 'preview-item';
+                    item.innerHTML = `
+                        <span class="preview-name">${skin.name}</span>
+                        <span class="preview-bonus">+${skin.bonus} ${skin.statIcon}</span>
+                    `;
+                    this.previewContent.appendChild(item);
+                }
+            }
+        }
+        
+        this.packPreviewModal.classList.add('active');
+    }
+    
     // ========== ОНЛАЙН ИГРА ==========
+    updatePlayerStats(won, score1, score2) {
+        if (!this.playerData) return;
+        
+        this.playerData.games = (this.playerData.games || 0) + 1;
+        if (won) {
+            this.playerData.wins = (this.playerData.wins || 0) + 1;
+            const crystalsEarned = Math.floor(Math.random() * 31) + 20;
+            this.playerData.crystals = (this.playerData.crystals || 0) + crystalsEarned;
+            console.log(`💎 +${crystalsEarned} кристаллов за победу`);
+        } else if (score1 === score2) {
+            this.playerData.losses = (this.playerData.losses || 0) + 1;
+            const crystalsEarned = Math.floor(Math.random() * 16) + 5;
+            this.playerData.crystals = (this.playerData.crystals || 0) + crystalsEarned;
+            console.log(`💎 +${crystalsEarned} кристаллов за ничью`);
+        } else {
+            this.playerData.losses = (this.playerData.losses || 0) + 1;
+        }
+        
+        const goalDiff = Math.abs(score1 - score2);
+        let starsChange = 0;
+        
+        if (won) {
+            starsChange = 50 + (score1 - score2) * 10;
+        } else {
+            starsChange = -30 - (score2 - score1) * 5;
+        }
+        
+        const newStars = Math.max(0, (this.playerData.stars || 100) + starsChange);
+        this.playerData.stars = Math.round(newStars);
+        
+        this.savePlayerData();
+        this.updateUIStats();
+        
+        console.log(`⭐ Изменение рейтинга: ${starsChange} → ${this.playerData.stars}`);
+    }
+    
     startGame(data) {
         this._gameEnded = false;
         this.isRunning = true;
@@ -834,7 +1240,7 @@ class FootballGame {
         console.log('⚽ Удар!');
     }
     
-    // ========== ДЖОСТИК (ОНЛАЙН) ==========
+    // ========== ДЖОСТИК ==========
     setupJoystick() {
         const base = document.getElementById('joystickBase');
         const thumb = document.getElementById('joystickThumb');
@@ -935,7 +1341,6 @@ class FootballGame {
         }
     }
     
-    // ========== ДЖОСТИК (СВОБОДНАЯ ИГРА) ==========
     setupFreePlayJoystick() {
         const base = document.getElementById('freePlayJoystickBase');
         const thumb = document.getElementById('freePlayJoystickThumb');
@@ -1015,7 +1420,7 @@ class FootballGame {
         window.addEventListener('mouseup', () => { if (!active) return; resetJoystick(); });
     }
     
-    // ========== CANVAS (ОНЛАЙН) ==========
+    // ========== CANVAS ==========
     resizeCanvas() {
         if (!this.canvas) return;
         const headerHeight = document.querySelector('#gameScreen .game-header')?.offsetHeight || 50;
@@ -1229,7 +1634,6 @@ class FootballGame {
         }
     }
     
-    // ========== CANVAS (СВОБОДНАЯ ИГРА) ==========
     resizeFreeCanvas() {
         if (!this.freeCanvas) return;
         const headerHeight = document.querySelector('#freePlayScreen .game-header')?.offsetHeight || 50;
@@ -1497,12 +1901,7 @@ class FootballGame {
             this.playerBtn.addEventListener('click', () => this.showScreen('playerScreen'));
         }
         if (this.upgradeBtn) {
-            this.upgradeBtn.addEventListener('click', () => {
-                console.log('📈 Открываем прокачку');
-                this.showScreen('upgradeScreen');
-            });
-        } else {
-            console.error('❌ Кнопка upgradeBtn не найдена');
+            this.upgradeBtn.addEventListener('click', () => this.showScreen('upgradeScreen'));
         }
         
         // Матчи
@@ -1535,15 +1934,71 @@ class FootballGame {
             this.backFromUpgradeBtn.addEventListener('click', () => this.showScreen('menuScreen'));
         }
         if (this.inventoryBtn) {
-            this.inventoryBtn.addEventListener('click', () => {
-                alert('🎒 Инвентарь — скоро!');
-            });
+            this.inventoryBtn.addEventListener('click', () => this.showScreen('inventoryScreen'));
         }
         if (this.packsBtn) {
-            this.packsBtn.addEventListener('click', () => {
-                alert('📦 Паки — скоро!');
+            this.packsBtn.addEventListener('click', () => this.showScreen('packsScreen'));
+        }
+        
+        // Инвентарь
+        if (this.backFromInventoryBtn) {
+            this.backFromInventoryBtn.addEventListener('click', () => this.showScreen('upgradeScreen'));
+        }
+        
+        // Фильтры инвентаря
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.currentFilter = btn.dataset.filter;
+                this.updateInventory();
+            });
+        });
+        
+        // Паки
+        if (this.backFromPacksBtn) {
+            this.backFromPacksBtn.addEventListener('click', () => this.showScreen('upgradeScreen'));
+        }
+        
+        // Кнопки открытия паков
+        document.querySelectorAll('.pack-open-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.openPack(btn.dataset.pack);
+            });
+        });
+        
+        // Кнопки превью паков
+        document.querySelectorAll('.pack-preview-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.showPackPreview(btn.dataset.pack);
+            });
+        });
+        
+        // Закрытие результата
+        if (this.closeResultBtn) {
+            this.closeResultBtn.addEventListener('click', () => {
+                this.packResultModal.classList.remove('active');
             });
         }
+        
+        // Закрытие превью
+        if (this.closePreviewBtn) {
+            this.closePreviewBtn.addEventListener('click', () => {
+                this.packPreviewModal.classList.remove('active');
+            });
+        }
+        
+        // Закрытие по клику вне
+        this.packResultModal.addEventListener('click', (e) => {
+            if (e.target === this.packResultModal) {
+                this.packResultModal.classList.remove('active');
+            }
+        });
+        this.packPreviewModal.addEventListener('click', (e) => {
+            if (e.target === this.packPreviewModal) {
+                this.packPreviewModal.classList.remove('active');
+            }
+        });
         
         // Создание лобби
         if (this.backFromCreateBtn) {
