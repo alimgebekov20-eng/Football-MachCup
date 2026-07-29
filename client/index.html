@@ -35,13 +35,30 @@
                     <span id="displayWins">🏆 0W</span>
                     <span id="displayLosses">💔 0L</span>
                 </div>
-                <div class="player-buttons">
-                    <button id="changeNameBtn" class="btn-small">✏️ Сменить имя</button>
-                    <button id="statsBtn" class="btn-small">📊 Характеристики</button>
-                </div>
             </div>
             
             <div class="menu-buttons">
+                <button id="matchesBtn" class="btn-menu btn-matches">
+                    <span class="icon">⚔️</span>
+                    Матчи
+                </button>
+                <button id="playerBtn" class="btn-menu btn-player">
+                    <span class="icon">👤</span>
+                    Игрок
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ЭКРАН МАТЧИ -->
+    <div id="matchesScreen" class="screen">
+        <div class="matches-container">
+            <div class="screen-header">
+                <button id="backFromMatchesBtn" class="btn-back-header">←</button>
+                <h2>⚔️ Матчи</h2>
+            </div>
+            
+            <div class="matches-buttons">
                 <button id="createLobbyBtn" class="btn-menu btn-lobby">
                     <span class="icon">🏠</span>
                     Создать лобби
@@ -50,14 +67,47 @@
                     <span class="icon">🔍</span>
                     Найти лобби
                 </button>
+                <button id="freePlayBtn" class="btn-menu btn-freeplay">
+                    <span class="icon">🏟️</span>
+                    Свободная игра
+                </button>
             </div>
+            
+            <button id="backFromMatchesBottomBtn" class="btn-back">← Назад</button>
+        </div>
+    </div>
+
+    <!-- ЭКРАН ИГРОК -->
+    <div id="playerScreen" class="screen">
+        <div class="player-container">
+            <div class="screen-header">
+                <button id="backFromPlayerBtn" class="btn-back-header">←</button>
+                <h2>👤 Игрок</h2>
+            </div>
+            
+            <div class="player-buttons">
+                <button id="playerStatsBtn" class="btn-menu btn-stats">
+                    <span class="icon">📊</span>
+                    Характеристики
+                </button>
+                <button id="playerChangeNameBtn" class="btn-menu btn-rename">
+                    <span class="icon">✏️</span>
+                    Сменить имя
+                </button>
+            </div>
+            
+            <button id="backFromPlayerBottomBtn" class="btn-back">← Назад</button>
         </div>
     </div>
 
     <!-- ЭКРАН СОЗДАНИЯ ЛОББИ -->
     <div id="createLobbyScreen" class="screen">
         <div class="create-lobby-container">
-            <h2>Выберите режим</h2>
+            <div class="screen-header">
+                <button id="backFromCreateBtn" class="btn-back-header">←</button>
+                <h2>Выберите режим</h2>
+            </div>
+            
             <div class="mode-buttons">
                 <button id="mode1v1Btn" class="btn-mode">
                     <span class="mode-icon">⚔️</span>
@@ -70,20 +120,21 @@
                     <span class="mode-desc">Командная игра</span>
                 </button>
             </div>
-            <button id="backFromCreateBtn" class="btn-back">← Назад</button>
         </div>
     </div>
 
     <!-- ЭКРАН ЛОББИ -->
     <div id="lobbyScreen" class="screen">
         <div class="lobby-container">
-            <div class="lobby-header">
+            <div class="screen-header">
+                <button id="leaveLobbyBtn" class="btn-back-header">←</button>
                 <h2>🏠 Лобби</h2>
-                <div class="lobby-code-display">
-                    <span class="code-label">Код:</span>
-                    <span class="code-value" id="lobbyCode">----</span>
-                    <button id="copyCodeBtn" class="btn-small">📋</button>
-                </div>
+            </div>
+            
+            <div class="lobby-code-display">
+                <span class="code-label">Код:</span>
+                <span class="code-value" id="lobbyCode">----</span>
+                <button id="copyCodeBtn" class="btn-small">📋</button>
             </div>
             
             <div class="lobby-info">
@@ -95,7 +146,6 @@
             
             <div class="lobby-actions">
                 <button id="startGameBtn" class="btn-primary btn-start" disabled>🚀 Старт</button>
-                <button id="leaveLobbyBtn" class="btn-danger">Выйти</button>
             </div>
             
             <div id="lobbyStatus" class="lobby-status">Ожидание игроков...</div>
@@ -105,19 +155,26 @@
     <!-- ЭКРАН ПОИСКА ЛОББИ -->
     <div id="findLobbyScreen" class="screen">
         <div class="find-lobby-container">
-            <h2>🔍 Доступные лобби</h2>
+            <div class="screen-header">
+                <button id="backFromFindBtn" class="btn-back-header">←</button>
+                <h2>🔍 Доступные лобби</h2>
+            </div>
+            
             <div id="lobbiesList" class="lobbies-list">
                 <div class="loading-text">Поиск лобби...</div>
             </div>
             <button id="refreshLobbiesBtn" class="btn-secondary">🔄 Обновить</button>
-            <button id="backFromFindBtn" class="btn-back">← Назад</button>
         </div>
     </div>
 
     <!-- ЭКРАН ХАРАКТЕРИСТИК -->
     <div id="statsScreen" class="screen">
         <div class="stats-container">
-            <h2>📊 Характеристики</h2>
+            <div class="screen-header">
+                <button id="backFromStatsBtn" class="btn-back-header">←</button>
+                <h2>📊 Характеристики</h2>
+            </div>
+            
             <div class="stats-grid">
                 <div class="stat-item">
                     <span class="stat-icon">🏃</span>
@@ -144,11 +201,10 @@
                     <div class="stat-bar"><div class="stat-bar-fill" id="statDefenseBar" style="width:50%"></div></div>
                 </div>
             </div>
-            <button id="backFromStatsBtn" class="btn-primary">← Назад в меню</button>
         </div>
     </div>
 
-    <!-- ИГРОВОЙ ЭКРАН -->
+    <!-- ИГРОВОЙ ЭКРАН (ОНЛАЙН) -->
     <div id="gameScreen" class="screen">
         <div class="game-header">
             <div class="score-board">
@@ -166,7 +222,6 @@
         
         <canvas id="gameCanvas"></canvas>
         
-        <!-- ВИРТУАЛЬНЫЙ ДЖОСТИК -->
         <div class="controls">
             <div id="joystickContainer">
                 <div id="joystickBase">
@@ -196,6 +251,45 @@
                 </div>
                 <p id="winnerMessage">Ничья!</p>
                 <button id="backToMenuBtn" class="btn-primary">В меню</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ИГРОВОЙ ЭКРАН (СВОБОДНАЯ ИГРА) -->
+    <div id="freePlayScreen" class="screen">
+        <div class="game-header">
+            <div class="score-board">
+                <div class="team team-left">
+                    <span class="team-name">Вы</span>
+                    <span class="team-score" id="freePlayScore">0</span>
+                </div>
+                <div class="timer" id="freePlayTimer">∞</div>
+                <div class="team team-right">
+                    <span class="team-score" id="freePlayOpponentScore">0</span>
+                    <span class="team-name">Соперник</span>
+                </div>
+            </div>
+            <button id="exitFreePlayBtn" class="btn-exit">✕ Выход</button>
+        </div>
+        
+        <canvas id="freePlayCanvas"></canvas>
+        
+        <div class="controls">
+            <div id="freePlayJoystickContainer">
+                <div id="freePlayJoystickBase">
+                    <div id="freePlayJoystickThumb"></div>
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <button id="freePlayKickBtn" class="action-btn kick-btn">
+                    <span>⚽</span>
+                    Удар
+                </button>
+                <button id="freePlayTackleBtn" class="action-btn tackle-btn">
+                    <span>🛡️</span>
+                    Отбор
+                </button>
             </div>
         </div>
     </div>
